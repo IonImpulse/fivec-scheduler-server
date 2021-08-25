@@ -469,6 +469,7 @@ dependencies = [
  "futures",
  "lazy_static",
  "log",
+ "openssl",
  "reqwest",
  "ron",
  "serde",

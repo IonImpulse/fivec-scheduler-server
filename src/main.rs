@@ -1,5 +1,8 @@
 
-use actix_web::{dev::Server, middleware, rt, web, App, HttpRequest, HttpServer, Responder, get, HttpResponse};
+use actix_web::dev::Server;
+use actix_web::*;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+
 use futures::future;
 use std::time::Duration;
 use std::sync::mpsc;
@@ -137,14 +140,16 @@ async fn async_main() {
         .unwrap();
     builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
+    let address: String = format!("localhost:{}", PORT);
+
     HttpServer::new(|| {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
     })
     .workers(4)
-    .bind_openssl(format!("localhost:{}", PORT), builder)
-    .expect(format!("Could not bind to localhost:{}", PORT))
+    .bind_openssl(address.as_str(), builder)
+    .unwrap()
     .run()
     .await
     .unwrap()

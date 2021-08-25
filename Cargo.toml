@@ -17,3 +17,4 @@ env_logger = "*"
 log = "*"
 tokio = { version = "*", features = ["full"] }
 lazy_static = "*"
+openssl = "*"
