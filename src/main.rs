@@ -143,7 +143,7 @@ async fn async_main() {
             .service(update_all_courses)
     })
     .workers(4)
-    .bind_openssl((format!("localhost:{}", PORT), builder))
+    .bind_openssl(format!("localhost:{}", PORT), builder)
     .expect(format!("Could not bind to localhost:{}", PORT))
     .run()
     .await
