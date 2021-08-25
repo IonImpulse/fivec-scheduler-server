@@ -130,13 +130,20 @@ async fn async_main() {
         let _ = update_loop().await;
     });
 
+    let mut builder =
+        SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("/etc/letsencrypt/live/api.5cheduler.com/privkey.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
+
     HttpServer::new(|| {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
     })
     .workers(4)
-    .bind(format!("localhost:{}", PORT))
+    .bind_openssl((format!("localhost:{}", PORT), builder)
     .expect(format!("Could not bind to localhost:{}", PORT))
     .run()
     .await
