@@ -42,7 +42,7 @@ lazy_static! {
 }
 
 
-const PORT: u32 = 80;
+const PORT: u32 = 8080;
 
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 60;
