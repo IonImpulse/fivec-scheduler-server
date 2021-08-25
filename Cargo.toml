@@ -18,3 +18,4 @@ log = "*"
 tokio = { version = "*", features = ["full"] }
 lazy_static = "*"
 openssl = "*"
+ctrlc = "*"

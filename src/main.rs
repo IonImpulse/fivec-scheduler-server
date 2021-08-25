@@ -6,6 +6,7 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use futures::future;
 use std::time::Duration;
 use std::sync::mpsc;
+use std::process::exit;
 use env_logger::*;
 use log::*;
 use tokio::*;
@@ -159,6 +160,13 @@ async fn async_main() {
 fn main() {
     std::env::set_var("RUST_LOG", "info,trace");
     env_logger::init();
+
+    ctrlc::set_handler(move || {
+        info!("Exiting...");
+        thread::sleep(Duration::from_secs(2));
+        exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
 
     info!("5cheduler Server starting up...");
 
