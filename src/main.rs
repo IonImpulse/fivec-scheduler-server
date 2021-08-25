@@ -39,7 +39,7 @@ lazy_static! {
 }
 
 
-const PORT: u32 = 8080;
+const PORT: u32 = 80;
 
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 60;
@@ -136,8 +136,8 @@ async fn async_main() {
             .service(update_all_courses)
     })
     .workers(4)
-    .bind("127.0.0.1:8080")
-    .expect("Couldn't bind to port 8080")
+    .bind(format!("localhost:{}", PORT))
+    .expect(format!("Could not bind to localhost:{}", PORT))
     .run()
     .await
     .unwrap()
