@@ -141,7 +141,7 @@ async fn async_main() {
         .unwrap();
     builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
-    let address: String = format!("localhost:{}", PORT);
+    let address: String = format!("127.0.0.1:{}", PORT);
 
     HttpServer::new(|| {
         App::new()
