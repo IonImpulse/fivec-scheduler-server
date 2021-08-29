@@ -120,7 +120,8 @@ async fn update_loop() -> std::io::Result<()> {
 /// Main function to run both actix_web server adn API update loop
 /// API update loops lives inside a tokio thread while the actix_web
 /// server is run in the main thread and blocks until done.
-async fn async_main() {
+#[actix_web::main]
+async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
     // Load databases if they exist
@@ -153,7 +154,6 @@ async fn async_main() {
     .unwrap()
     .run()
     .await
-    .unwrap()
 }
 
 
@@ -169,14 +169,4 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     info!("5cheduler Server starting up...");
-
-    actix_web::rt::System::with_tokio_rt(|| {
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .worker_threads(4)
-            .thread_name("main-tokio")
-            .build()
-            .unwrap()
-    })
-    .block_on(async_main());
 }
