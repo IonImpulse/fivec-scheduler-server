@@ -169,4 +169,7 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     info!("5cheduler Server starting up...");
+    loop {
+        
+    }
 }
