@@ -134,21 +134,21 @@ async fn async_main() -> std::io::Result<()> {
         let _ = update_loop().await;
     });
 
-    //let mut builder =
-    //    SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    //builder
-    //    .set_private_key_file("/etc/letsencrypt/live/api.5cheduler.com/privkey.pem", SslFiletype::PEM)
-    //    .unwrap();
-    //builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
+    let mut builder =
+        SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("/etc/letsencrypt/live/api.5cheduler.com/privkey.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
-    let address: String = format!("127.0.0.1:{}", PORT);
+    let address: String = format!("0.0.0.0:{}", PORT);
 
     HttpServer::new(|| {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
     })
-    .bind(address.as_str())
+    .bind_openssl(address.as_str(), builder)
     .unwrap()
     .run()
     .await
