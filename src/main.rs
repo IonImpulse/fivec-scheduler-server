@@ -120,7 +120,6 @@ async fn update_loop() -> std::io::Result<()> {
 /// Main function to run both actix_web server adn API update loop
 /// API update loops lives inside a tokio thread while the actix_web
 /// server is run in the main thread and blocks until done.
-#[actix_web::main]
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
@@ -149,7 +148,6 @@ async fn async_main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
     })
-    .workers(4)
     .bind_openssl(address.as_str(), builder)
     .unwrap()
     .run()
@@ -169,7 +167,6 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     info!("5cheduler Server starting up...");
-    loop {
-        
-    }
+
+    futures::executor::block_on(async_main());
 }
