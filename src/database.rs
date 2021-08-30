@@ -12,7 +12,7 @@ const COURSE_DATABASE_NAME: &str = "./course_cache.ron";
 const CODE_DATA_NAME: &str = "./code_data.ron";
 
 const POSSIBLE_CODE_CHARS: &'static [char] = &['2', '3', '4', '6', '7', '9', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P', 'A', 'D', 'F', 'G', 'H', 'X'];
-const CODE_LENGTH: u8 = 6;
+const CODE_LENGTH: u8 = 7;
 
 pub fn load_course_database() -> Result<Vec<Course>, Error> {
     let file = OpenOptions::new().read(true).open(COURSE_DATABASE_NAME);
