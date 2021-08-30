@@ -2,7 +2,7 @@
 This repository contains the code that runs in a VPS and server www.5cheduler.com.
 Additionally, this server also exposes an API that anyone can use for their own projects (within reason).
 Currently, the following API methods are available:
-### `GET` /update
+### `GET` /fullupdate
 `@returns` a JSON object with every single course in the Claremont colleges, guaranteed freshness of 1 minute or less.
 Example entry in JSON object returned:
 ```json

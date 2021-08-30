@@ -1,10 +1,8 @@
 
-use actix_web::dev::Server;
 use actix_web::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
-use futures::future;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::sync::mpsc;
 use std::process::exit;
 use env_logger::*;
@@ -23,49 +21,74 @@ use database::*;
 
 struct MemDatabase {
     pub course_cache: Vec<Course>,
+    pub last_change: u128,
 }
 
 impl MemDatabase {
     fn new() -> Self {
         Self {
             course_cache: Vec::new(),
+            last_change: 0,
         }
     }
 }
 
 // GLOBAL database variable
-// Not the best way of doing this but it's hard with serenity
-// as functions are called with no easy way to pass
-// a main database in the function
+// Not the best way of doing this but it's hard with actix
 lazy_static! {
     static ref MEMORY_DATABASE: Arc<Mutex<MemDatabase>> =
         Arc::new(Mutex::new(MemDatabase::new()));
 }
 
+// Debug vs release address
+#[cfg(debug_assertions)]
+const ADDRESS: &str = "127.0.0.1:8080";
+#[cfg(not(debug_assertions))]
+const ADDRESS: &str = "0.0.0.0:8080";
 
-const PORT: u32 = 8080;
 
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 60;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
+const FILE_CHANCE_MULTIPLIER: u64 = 30;
 
 /// A simple cache for courses
 /// @returns all courses in the cache for all schools at current term
-#[get("/update")]
+#[get("/fullupdate")]
 async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
     let courses = lock.course_cache.clone();
+    let last_change = lock.last_change.clone();
 
     drop(lock);
 
-    HttpResponse::Ok().json(courses)
+    HttpResponse::Ok().json((last_change, courses))
 }
+
+#[get("/updateIfStale/{unix_timestamp_seconds}")]
+async fn update_courses(path: web::Path<u128>) -> HttpResponse {
+    let unix_timestamp_seconds = path.into_inner();
+
+    let lock = MEMORY_DATABASE.lock().await;
+
+    if &lock.last_change != &unix_timestamp_seconds {
+        let courses = lock.course_cache.clone();
+        let last_change = lock.last_change.clone();
+
+        drop(lock);
+
+        HttpResponse::Ok().json((last_change, courses))
+    } else {
+        HttpResponse::Ok().json("No update needed")
+    }
+}
+
 
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
     let mut time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-
+    let mut time_until_file_save = FILE_CHANCE_MULTIPLIER;
 
     loop {
         info!("Starting schedule API update...");
@@ -101,6 +124,7 @@ async fn update_loop() -> std::io::Result<()> {
             let mut lock = MEMORY_DATABASE.lock().await;
 
             lock.course_cache = final_course_update;
+            lock.last_change = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u128;
 
             drop(lock);
             
@@ -108,6 +132,22 @@ async fn update_loop() -> std::io::Result<()> {
             
         }
         info!("Finished schedule update!");
+
+        if time_until_file_save == 0 {
+            time_until_file_save = FILE_CHANCE_MULTIPLIER;
+
+            info!("Saving cache to file...");
+
+            let lock = MEMORY_DATABASE.lock().await;
+
+            let _ = save_course_database(lock.course_cache.clone());
+
+            drop(lock);
+
+            info!("Saved cache to file!");
+        } else {
+            time_until_file_save -= 1;
+        }
 
         if number_of_repeated_errors > 5 {
             warn!("Errors have reached dangerous levels!! Currently at {} repeated errors...", number_of_repeated_errors);
@@ -141,14 +181,12 @@ async fn async_main() -> std::io::Result<()> {
         .unwrap();
     builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
-    let address: String = format!("0.0.0.0:{}", PORT);
-
     HttpServer::new(|| {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
     })
-    .bind_openssl(address.as_str(), builder)
+    .bind_openssl(ADDRESS, builder)
     .unwrap()
     .run()
     .await
