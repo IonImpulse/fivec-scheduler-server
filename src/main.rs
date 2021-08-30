@@ -161,6 +161,7 @@ async fn async_main() -> std::io::Result<()> {
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
             .service(update_if_stale)
+            .service(get_unique_code)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()
