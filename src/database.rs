@@ -97,3 +97,12 @@ pub fn generate_unique_code(course_list: Vec<Course>, code_hashmap: BiHashMap<St
         }
     }
 }
+
+pub fn get_course_list(code: String, code_hashmap: BiHashMap<String, Vec<Course>>) -> Option<Vec<Course>> {
+    let result = code_hashmap.get_by_left(&code);
+
+    match result {
+        Some(result) => Some(result.clone()),
+        None => None
+    }
+}

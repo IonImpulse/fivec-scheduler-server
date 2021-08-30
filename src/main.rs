@@ -162,6 +162,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(update_all_courses)
             .service(update_if_stale)
             .service(get_unique_code)
+            .service(get_course_list_by_code)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()

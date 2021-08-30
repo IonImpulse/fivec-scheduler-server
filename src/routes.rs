@@ -1,6 +1,7 @@
 use crate::*;
 use actix_web::*;
 
+
 /// A simple cache for courses
 /// @returns all courses in the cache for all schools at current term
 #[get("/fullupdate")]
@@ -54,4 +55,22 @@ pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
     drop(lock);
 
     HttpResponse::Ok().json(code)
+}
+
+#[get("/getCourseListByCode/{code}")]
+pub async fn get_course_list_by_code(path: web::Path<String>) -> HttpResponse {
+    let code = path.into_inner();
+    
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let code_cache = lock.code_cache.clone();
+
+    drop(lock);
+
+    let result = get_course_list(code, code_cache);
+
+    match result {
+        Some(result) => HttpResponse::Ok().json(result),
+        None => HttpResponse::Ok().json("Invalid code"),
+    }
 }
