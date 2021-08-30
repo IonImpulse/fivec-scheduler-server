@@ -77,3 +77,16 @@ Example:
   ]
 ]
 ```
+
+### `GET` /updateIfStale/{unix_timestamp}
+`@params` timestamp from last update
+`@returns` an updated list if there has been a change since the timestamp, otherwise returns *"No update needed"*
+
+### `POST` /getUniqueCode
+`@contents` JSON list of courses to get a code for
+`@returns` a unique 7-character case-insensitive code that maps to that *exact* course list
+Supports custom courses
+
+### `GET` /getCourseListByCode/{code}
+`@params` 7-character code
+`@returns` JSON list of courses if code exists and is valid, otherwise returns "Invalid code"
