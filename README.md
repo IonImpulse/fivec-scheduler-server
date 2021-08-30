@@ -1,5 +1,5 @@
 # 5cheduler Server & API [WIP]
-This repository contains the code that runs in a VPS and serves www.5cheduler.com.
+This repository contains the code that runs in a VPS and serves https://www.5cheduler.com.
 Additionally, this server also exposes an API that anyone can use for their own projects (within reason).
 Currently, the following API methods are available:
 ### `GET` /fullupdate
@@ -80,13 +80,16 @@ Example:
 
 ### `GET` /updateIfStale/{unix_timestamp}
 `@params` timestamp from last update
+
 `@returns` an updated list if there has been a change since the timestamp, otherwise returns *"No update needed"*
 
 ### `POST` /getUniqueCode
 `@contents` JSON list of courses to get a code for
+
 `@returns` a unique 7-character case-insensitive code that maps to that *exact* course list
 Supports custom courses
 
 ### `GET` /getCourseListByCode/{code}
 `@params` 7-character code
+
 `@returns` JSON list of courses if code exists and is valid, otherwise returns "Invalid code"
