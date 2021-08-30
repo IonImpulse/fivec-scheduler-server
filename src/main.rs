@@ -28,7 +28,7 @@ impl MemDatabase {
     fn new() -> Self {
         Self {
             course_cache: Vec::new(),
-            last_change: 0,
+            last_change: get_unix_timestamp(),
         }
     }
 }
@@ -84,6 +84,10 @@ async fn update_courses(path: web::Path<u128>) -> HttpResponse {
     }
 }
 
+fn get_unix_timestamp() -> u128 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u128
+}
+
 
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
@@ -124,7 +128,7 @@ async fn update_loop() -> std::io::Result<()> {
             let mut lock = MEMORY_DATABASE.lock().await;
 
             lock.course_cache = final_course_update;
-            lock.last_change = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u128;
+            lock.last_change = get_unix_timestamp();
 
             drop(lock);
             

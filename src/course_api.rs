@@ -371,7 +371,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         });
     }
 
-    // Get inpub structors
+    // Get instructors
     let instructors: Vec<String> = group[5].split("<BR>").map(|x| x.to_string()).collect();
 
     // Get notes
@@ -465,6 +465,7 @@ pub async fn get_all_descriptions(courses: Vec<Course>) -> Result<Vec<Course>> {
 
 }
 
+#[cold]
 async fn test_full_update() {
     let all_descriptions = get_all_courses().await.unwrap();
     let all_descriptions = get_all_descriptions(all_descriptions).await.unwrap();
