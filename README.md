@@ -92,4 +92,4 @@ Supports custom courses
 ### `GET` /getCourseListByCode/{code}
 `@params` 7-character code
 
-`@returns` JSON list of courses if code exists and is valid, otherwise returns "Invalid code"
+`@returns` JSON list of courses if code exists and is valid, otherwise returns *"Invalid code"*
