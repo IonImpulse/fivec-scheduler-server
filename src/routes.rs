@@ -45,7 +45,13 @@ pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
 
     drop(lock);
 
-    let code = generate_unique_code(course_list, code_cache);
+    let (code, updated_code_cache) = generate_unique_code(course_list, code_cache);
+
+    let mut lock = MEMORY_DATABASE.lock().await;
+
+    lock.code_cache = updated_code_cache;
+
+    drop(lock);
 
     HttpResponse::Ok().json(code)
 }
