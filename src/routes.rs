@@ -16,7 +16,7 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
 }
 
 #[get("/updateIfStale/{unix_timestamp_seconds}")]
-pub async fn update_if_stale(path: web::Path<u128>) -> HttpResponse {
+pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
     let unix_timestamp_seconds = path.into_inner();
 
     let lock = MEMORY_DATABASE.lock().await;

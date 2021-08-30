@@ -22,7 +22,7 @@ use routes::*;
 
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
-    pub last_change: u128,
+    pub last_change: u64,
 }
 
 impl MemDatabase {
@@ -53,8 +53,8 @@ const API_UPDATE_INTERVAL: u64 = 60;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
 const FILE_CHANCE_MULTIPLIER: u64 = 30;
 
-pub fn get_unix_timestamp() -> u128 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u128
+pub fn get_unix_timestamp() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
 
