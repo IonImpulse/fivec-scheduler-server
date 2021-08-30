@@ -210,12 +210,12 @@ impl Course {
     }
 }
 
-pub fn get_rows_clean(raw_text: String) -> Vec<String> {
-    // Split at start of table and end, taking only the rowss
+pub fn get_rows_clean(raw_text: String) -> Option<Vec<String>> {
+    // Split at start of table and end, taking only the rows
     let rows: Vec<&str> = raw_text
-        .split_at(raw_text.find("<tbody>").unwrap())
+        .split_at(raw_text.find("<tbody>")?)
         .1
-        .split_at(raw_text.find("</tbody>").unwrap())
+        .split_at(raw_text.find("</tbody>")?)
         .0
         .lines()
         .collect();
@@ -223,7 +223,7 @@ pub fn get_rows_clean(raw_text: String) -> Vec<String> {
     // Clean up each row and convert to a string
     let clean_rows = rows.iter().map(|row| row.trim().to_string()).collect();
 
-    clean_rows
+    Some(clean_rows)
 }
 
 pub fn group_rows_as_courses(rows: Vec<String>) -> Vec<Vec<String>> {
@@ -403,8 +403,12 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
     // Clean raw html data
     let html_rows = get_rows_clean(data);
 
+    if html_rows.is_none() {
+        return Ok(Vec::new())
+    }
+
     // Group rows into courses
-    let html_grouped_rows = group_rows_as_courses(html_rows);
+    let html_grouped_rows = group_rows_as_courses(html_rows.unwrap());
 
     // Convert each group of rows into a Course
     let courses: Vec<Course> = html_grouped_rows
