@@ -73,36 +73,42 @@ async fn update_loop() -> std::io::Result<()> {
             number_of_repeated_errors += 1;
             error!("Error getting courses: {}", course_update.unwrap_err());
         } else {
-            number_of_repeated_errors = 0;
-            info!("Successfully updated courses!");
             let mut final_course_update: Vec<Course> = course_update.unwrap();
 
-            if time_until_description_update == 0 {
-                info!("Retreiving description info... (may take several minutes)");
-
-                time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-                let course_desc_update = get_all_descriptions(final_course_update.clone()).await;
-
-                if course_desc_update.is_err() {
-                    number_of_repeated_errors += 1;
-                    error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
-                } else {
-                    number_of_repeated_errors = 0;
-                    final_course_update = course_desc_update.unwrap();
+            if final_course_update.is_empty() {
+                number_of_repeated_errors += 1;
+                error!("No courses found!");
+            } else {
+                number_of_repeated_errors = 0;
+                info!("Successfully updated courses!");
+    
+                
+                if time_until_description_update == 0 {
+                    info!("Retreiving description info... (may take several minutes)");
+    
+                    time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
+                    let course_desc_update = get_all_descriptions(final_course_update.clone()).await;
+    
+                    if course_desc_update.is_err() {
+                        number_of_repeated_errors += 1;
+                        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
+                    } else {
+                        number_of_repeated_errors = 0;
+                        final_course_update = course_desc_update.unwrap();
+                    }
+    
                 }
-
-            }
-            info!("Saving courses to memory...");
-
-            let mut lock = MEMORY_DATABASE.lock().await;
-
-            lock.course_cache = final_course_update;
-            lock.last_change = get_unix_timestamp();
-
-            drop(lock);
-            
-            info!("Saved courses to memory!")
-            
+                info!("Saving courses to memory...");
+    
+                let mut lock = MEMORY_DATABASE.lock().await;
+    
+                lock.course_cache = final_course_update;
+                lock.last_change = get_unix_timestamp();
+    
+                drop(lock);
+                
+                info!("Saved courses to memory!")    
+            }   
         }
         info!("Finished schedule update!");
 
