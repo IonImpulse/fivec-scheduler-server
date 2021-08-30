@@ -2,14 +2,12 @@ use actix_web::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::sync::mpsc;
 use std::process::exit;
-use env_logger::*;
 use log::*;
-use tokio::*;
 use tokio::sync::Mutex;
 use lazy_static::*;
-use std::{collections::*, env, sync::Arc, thread};
+use std::{sync::Arc, thread};
+use bimap::*;
 
 mod course_api;
 mod database;
@@ -23,6 +21,7 @@ use routes::*;
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
     pub last_change: u64,
+    pub code_cache: BiHashMap<String, Vec<Course>>
 }
 
 impl MemDatabase {
@@ -30,6 +29,7 @@ impl MemDatabase {
         Self {
             course_cache: Vec::new(),
             last_change: get_unix_timestamp(),
+            code_cache: BiHashMap::new(),
         }
     }
 }
@@ -51,7 +51,7 @@ const ADDRESS: &str = "0.0.0.0:8080";
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 60;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
-const FILE_CHANCE_MULTIPLIER: u64 = 30;
+const FILE_CHANCE_MULTIPLIER: u64 = 5;
 
 pub fn get_unix_timestamp() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
@@ -109,11 +109,12 @@ async fn update_loop() -> std::io::Result<()> {
         if time_until_file_save == 0 {
             time_until_file_save = FILE_CHANCE_MULTIPLIER;
 
-            info!("Saving cache to file...");
+            info!("Saving caches to file...");
 
             let lock = MEMORY_DATABASE.lock().await;
 
             let _ = save_course_database(lock.course_cache.clone());
+            let _ = save_code_database(lock.code_cache.clone());
 
             drop(lock);
 
@@ -139,6 +140,7 @@ async fn async_main() -> std::io::Result<()> {
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();
+    lock.code_cache = load_code_database().unwrap();
     drop(lock);
 
     info!("Database(s) loaded!");
@@ -180,7 +182,7 @@ fn main() {
 
     info!("5cheduler Server starting up...");
 
-    actix_web::rt::System::with_tokio_rt(|| {
+    let _ = actix_web::rt::System::with_tokio_rt(|| {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .worker_threads(1)

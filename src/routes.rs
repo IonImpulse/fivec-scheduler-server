@@ -15,6 +15,8 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
     HttpResponse::Ok().json((last_change, courses))
 }
 
+/// Since the course cache updates only occacionally, this endpoint is used to
+/// update only if the local cache is out of date.
 #[get("/updateIfStale/{unix_timestamp_seconds}")]
 pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
     let unix_timestamp_seconds = path.into_inner();
@@ -31,4 +33,19 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
     } else {
         HttpResponse::Ok().json("No update needed")
     }
+}
+
+#[post("/getUniqueCode")]
+pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
+    let course_list = post.into_inner();
+    
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let code_cache = lock.code_cache.clone();
+
+    drop(lock);
+
+    let code = generate_unique_code(course_list, code_cache);
+
+    HttpResponse::Ok().json(code)
 }
