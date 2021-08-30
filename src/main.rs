@@ -1,4 +1,3 @@
-
 use actix_web::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
@@ -14,12 +13,14 @@ use std::{collections::*, env, sync::Arc, thread};
 
 mod course_api;
 mod database;
+mod routes;
 
 use course_api::*;
 use database::*;
+use routes::*;
 
 
-struct MemDatabase {
+pub struct MemDatabase {
     pub course_cache: Vec<Course>,
     pub last_change: u128,
 }
@@ -36,7 +37,7 @@ impl MemDatabase {
 // GLOBAL database variable
 // Not the best way of doing this but it's hard with actix
 lazy_static! {
-    static ref MEMORY_DATABASE: Arc<Mutex<MemDatabase>> =
+    pub static ref MEMORY_DATABASE: Arc<Mutex<MemDatabase>> =
         Arc::new(Mutex::new(MemDatabase::new()));
 }
 
@@ -52,39 +53,7 @@ const API_UPDATE_INTERVAL: u64 = 60;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
 const FILE_CHANCE_MULTIPLIER: u64 = 30;
 
-/// A simple cache for courses
-/// @returns all courses in the cache for all schools at current term
-#[get("/fullupdate")]
-async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
-    let lock = MEMORY_DATABASE.lock().await;
-
-    let courses = lock.course_cache.clone();
-    let last_change = lock.last_change.clone();
-
-    drop(lock);
-
-    HttpResponse::Ok().json((last_change, courses))
-}
-
-#[get("/updateIfStale/{unix_timestamp_seconds}")]
-async fn update_courses(path: web::Path<u128>) -> HttpResponse {
-    let unix_timestamp_seconds = path.into_inner();
-
-    let lock = MEMORY_DATABASE.lock().await;
-
-    if &lock.last_change != &unix_timestamp_seconds {
-        let courses = lock.course_cache.clone();
-        let last_change = lock.last_change.clone();
-
-        drop(lock);
-
-        HttpResponse::Ok().json((last_change, courses))
-    } else {
-        HttpResponse::Ok().json("No update needed")
-    }
-}
-
-fn get_unix_timestamp() -> u128 {
+pub fn get_unix_timestamp() -> u128 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u128
 }
 
@@ -189,6 +158,7 @@ async fn async_main() -> std::io::Result<()> {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
+            .service(update_if_stale)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()
