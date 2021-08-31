@@ -1,15 +1,14 @@
 use crate::course_api::*;
-use ron;
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions};
 use std::io::{Write, Read, Error};
 use bimap::*;
 
-use rand::{Rng, SeedableRng, RngCore};
+use rand::{SeedableRng};
 use rand::rngs::SmallRng;
 use rand::prelude::SliceRandom;
 
-const COURSE_DATABASE_NAME: &str = "./course_cache.ron";
-const CODE_DATA_NAME: &str = "./code_data.ron";
+const COURSE_DATABASE_NAME: &str = "./course_cache.json";
+const CODE_DATA_NAME: &str = "./code_data.json";
 
 const POSSIBLE_CODE_CHARS: &'static [char] = &['2', '3', '4', '6', '7', '9', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P', 'A', 'D', 'F', 'G', 'H', 'X'];
 const CODE_LENGTH: u8 = 7;
@@ -26,7 +25,7 @@ pub fn load_course_database() -> Result<Vec<Course>, Error> {
     
         file.read_to_string(&mut data)?;
     
-        let courses: Vec<Course> = ron::from_str(&data).unwrap();
+        let courses: Vec<Course> = serde_json::from_str(&data).unwrap();
         Ok(courses)
     }    
 }
@@ -34,7 +33,7 @@ pub fn load_course_database() -> Result<Vec<Course>, Error> {
 pub fn save_course_database(courses: Vec<Course>) -> Result<(), Error> {
     let mut writer = OpenOptions::new().create(true).write(true).open(COURSE_DATABASE_NAME)?;
 
-    let serialized_output = ron::to_string(&courses).unwrap();
+    let serialized_output = serde_json::to_string(&courses).unwrap();
 
     writer.write(serialized_output.as_bytes())?;
 
@@ -53,7 +52,7 @@ pub fn load_code_database() -> Result<BiHashMap<String, Vec<Course>>, Error> {
     
         file.read_to_string(&mut data)?;
     
-        let courses: BiHashMap<String, Vec<Course>> = ron::from_str(&data).unwrap();
+        let courses: BiHashMap<String, Vec<Course>> = serde_json::from_str(&data).unwrap();
         Ok(courses)
     }
 }
@@ -61,7 +60,7 @@ pub fn load_code_database() -> Result<BiHashMap<String, Vec<Course>>, Error> {
 pub fn save_code_database(code_hashmap: BiHashMap<String, Vec<Course>>) -> Result<(), Error> {
     let mut writer = OpenOptions::new().create(true).write(true).open(CODE_DATA_NAME)?;
 
-    let serialized_output = ron::to_string(&code_hashmap).unwrap();
+    let serialized_output = serde_json::to_string(&code_hashmap).unwrap();
 
     writer.write(serialized_output.as_bytes())?;
 
