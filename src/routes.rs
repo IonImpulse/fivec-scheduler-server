@@ -16,7 +16,7 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
     HttpResponse::Ok().json((last_change, courses))
 }
 
-/// Since the course cache updates only occacionally, this endpoint is used to
+/// Since the course cache updates only occasionally, this endpoint is used to
 /// update only if the local cache is out of date.
 #[get("/updateIfStale/{unix_timestamp_seconds}")]
 pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {

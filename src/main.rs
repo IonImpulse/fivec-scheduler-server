@@ -49,9 +49,9 @@ const ADDRESS: &str = "0.0.0.0:8080";
 
 
 // Seconds per API update
-const API_UPDATE_INTERVAL: u64 = 60;
+const API_UPDATE_INTERVAL: u64 = 120;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
-const FILE_CHANCE_MULTIPLIER: u64 = 5;
+const FILE_INTERVAL_MULTIPLIER: u64 = 5;
 
 pub fn get_unix_timestamp() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
@@ -61,7 +61,7 @@ pub fn get_unix_timestamp() -> u64 {
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
     let mut time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-    let mut time_until_file_save = FILE_CHANCE_MULTIPLIER;
+    let mut time_until_file_save = FILE_INTERVAL_MULTIPLIER;
 
     loop {
         info!("Starting schedule API update...");
@@ -113,7 +113,7 @@ async fn update_loop() -> std::io::Result<()> {
         info!("Finished schedule update!");
 
         if time_until_file_save == 0 {
-            time_until_file_save = FILE_CHANCE_MULTIPLIER;
+            time_until_file_save = FILE_INTERVAL_MULTIPLIER;
 
             info!("Saving caches to file...");
 
