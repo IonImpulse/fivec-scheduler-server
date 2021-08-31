@@ -447,7 +447,7 @@ pub async fn get_all_descriptions(courses: Vec<Course>) -> Result<Vec<Course>> {
     
             descriptions.push((course.get_desc_api_str(), text));
     
-            thread::sleep(time::Duration::from_millis(10));
+            thread::sleep(time::Duration::from_millis(100));
             i += 1;
         }
     }
