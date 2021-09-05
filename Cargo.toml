@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 actix-web = { version = "4.0.0-beta.8", features = ["openssl"] }
+actix-cors = "0.6.0-beta.2"
 reqwest = "*"
 chrono = { version = "*", features = ["serde"] }
 serde = "*"
@@ -17,7 +18,7 @@ env_logger = "*"
 log = "*"
 tokio = { version = "*", features = ["full"] }
 lazy_static = "*"
-openssl = "*"
+openssl = { version = "0.10", features = ["vendored"] }
 ctrlc = "*"
 rand = { version = "*", features = ["small_rng"] }
 bimap = { version = "0.6.1", features = ["serde"] }

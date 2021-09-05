@@ -2,6 +2,7 @@ use crate::course_api::*;
 use std::fs::{OpenOptions};
 use std::io::{Write, Read, Error};
 use bimap::*;
+use ::serde::{Serialize, Deserialize};
 
 use rand::{SeedableRng};
 use rand::rngs::SmallRng;
@@ -25,7 +26,7 @@ pub fn load_course_database() -> Result<Vec<Course>, Error> {
     
         file.read_to_string(&mut data)?;
     
-        let courses: Vec<Course> = serde_json::from_str(&data).unwrap();
+        let courses: Vec<Course> = from_slice_lenient(&data.as_bytes()).unwrap();
         Ok(courses)
     }    
 }
@@ -52,7 +53,7 @@ pub fn load_code_database() -> Result<BiHashMap<String, Vec<Course>>, Error> {
     
         file.read_to_string(&mut data)?;
     
-        let courses: BiHashMap<String, Vec<Course>> = serde_json::from_str(&data).unwrap();
+        let courses: BiHashMap<String, Vec<Course>> = from_slice_lenient(&data.as_bytes()).unwrap();
         Ok(courses)
     }
 }
@@ -104,4 +105,12 @@ pub fn get_course_list(code: String, code_hashmap: BiHashMap<String, Vec<Course>
         Some(result) => Some(result.clone()),
         None => None
     }
+}
+
+
+fn from_slice_lenient<'a, T: ::serde::Deserialize<'a>>(v: &'a [u8]) -> Result<T, serde_json::Error> {
+    let mut cur = std::io::Cursor::new(v);
+    let mut de = serde_json::Deserializer::new(serde_json::de::IoRead::new(&mut cur));
+    ::serde::Deserialize::deserialize(&mut de)
+    // note the lack of: de.end()
 }

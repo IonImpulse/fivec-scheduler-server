@@ -419,14 +419,14 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
     Ok(courses)
 }
 
-pub async fn get_all_descriptions(courses: Vec<Course>) -> Result<Vec<Course>> {
+pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: usize, batch_size: usize) -> Result<Vec<Course>> {
     // Get data from CMC API
     let mut i = 0;
     let mut api_calls: Vec<String> = Vec::new();
 
     let mut descriptions: Vec<(String, String)> = Vec::new();
 
-    for course in &courses {
+    for course in courses[description_number..description_number+batch_size].iter() {
         if !api_calls.contains(&course.get_desc_api_str()) {
             let url = format!(
                 "{}{}",
@@ -447,14 +447,14 @@ pub async fn get_all_descriptions(courses: Vec<Course>) -> Result<Vec<Course>> {
     
             descriptions.push((course.get_desc_api_str(), text));
     
-            thread::sleep(time::Duration::from_millis(100));
+            thread::sleep(time::Duration::from_millis(1000));
             i += 1;
         }
     }
 
     let mut description_courses: Vec<Course> = Vec::new();
 
-    for course in &courses {
+    for course in courses[description_number..description_number+batch_size].iter()  {
         let course_description_str = course.get_desc_api_str();
 
         let description = &descriptions.iter().find(|x| x.0 == course_description_str).unwrap().1;
@@ -469,12 +469,15 @@ pub async fn get_all_descriptions(courses: Vec<Course>) -> Result<Vec<Course>> {
 
 }
 
-#[cold]
-async fn test_full_update() {
-    let all_descriptions = get_all_courses().await.unwrap();
-    let all_descriptions = get_all_descriptions(all_descriptions).await.unwrap();
+pub fn merge_courses(updated: &mut Vec<Course>, target: &mut Vec<Course>, start_index: usize) -> Vec<Course> {
+    let mut merged = Vec::new();
+    let batch_size = updated.len();
+
+    merged = target.drain(..start_index).collect();
+
+    merged.append(updated);
     
-    save_course_database(all_descriptions.clone()).unwrap();
-    
-    assert_eq!(all_descriptions, load_course_database().unwrap())
+    merged.drain(start_index + batch_size..);
+
+    merged
 }

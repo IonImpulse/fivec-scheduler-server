@@ -1,4 +1,5 @@
 use actix_web::*;
+use actix_cors::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -50,8 +51,11 @@ const ADDRESS: &str = "0.0.0.0:8080";
 
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 120;
-const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 60;
+const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 3;
 const FILE_INTERVAL_MULTIPLIER: u64 = 5;
+
+// How many descriptions to update at once
+const DESCRIPTION_BATCH_SIZE: usize = 10;
 
 pub fn get_unix_timestamp() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
@@ -62,6 +66,7 @@ async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
     let mut time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
     let mut time_until_file_save = FILE_INTERVAL_MULTIPLIER;
+    let mut description_number = 0;
 
     loop {
         info!("Starting schedule API update...");
@@ -84,17 +89,24 @@ async fn update_loop() -> std::io::Result<()> {
     
                 
                 if time_until_description_update == 0 {
-                    info!("Retreiving description info... (may take several minutes)");
+                    info!("Retreiving partial description info... (may take several minutes)");
     
                     time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-                    let course_desc_update = get_all_descriptions(final_course_update.clone()).await;
+                    
+                    let course_desc_update = get_batch_descriptions(&final_course_update, description_number, DESCRIPTION_BATCH_SIZE).await;
     
                     if course_desc_update.is_err() {
                         number_of_repeated_errors += 1;
                         error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
                     } else {
                         number_of_repeated_errors = 0;
-                        final_course_update = course_desc_update.unwrap();
+                        final_course_update = merge_courses(&mut course_desc_update.unwrap(), &mut final_course_update, description_number);
+
+                        description_number += DESCRIPTION_BATCH_SIZE;
+
+                        if description_number > final_course_update.len() {
+                            description_number = 0;
+                        }
                     }
     
                 }
@@ -162,8 +174,15 @@ async fn async_main() -> std::io::Result<()> {
         .unwrap();
     builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
+
     HttpServer::new(|| {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allowed_methods(vec!["GET", "POST"])
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
             .service(update_if_stale)
