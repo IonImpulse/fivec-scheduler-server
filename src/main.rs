@@ -1,4 +1,5 @@
 use actix_web::*;
+use actix_cors::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -173,8 +174,15 @@ async fn async_main() -> std::io::Result<()> {
         .unwrap();
     builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
 
+
     HttpServer::new(|| {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allowed_methods(vec!["GET", "POST"])
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
             .service(update_if_stale)
