@@ -4,7 +4,7 @@ use actix_web::*;
 
 /// A simple cache for courses
 /// @returns all courses in the cache for all schools at current term
-#[get("/fullupdate")]
+#[get("/fullUpdate")]
 pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
