@@ -456,7 +456,7 @@ pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: u
     
             descriptions.push((course.get_desc_api_str(), text));
     
-            thread::sleep(time::Duration::from_millis(1000));
+            thread::sleep(time::Duration::from_millis(100));
             i += 1;
         }
     }
@@ -489,4 +489,13 @@ pub fn merge_courses(updated: &mut Vec<Course>, target: &mut Vec<Course>, start_
     merged.drain(start_index + batch_size..);
 
     merged
+}
+
+pub async fn test_full_update() {
+    let all_descriptions = get_all_courses().await.unwrap();
+    let all_descriptions = get_batch_descriptions(&all_descriptions, 0, all_descriptions.len()).await.unwrap();
+
+    save_course_database(all_descriptions.clone()).unwrap();
+
+    assert_eq!(all_descriptions, load_course_database().unwrap())
 }
