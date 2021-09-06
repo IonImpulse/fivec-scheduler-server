@@ -123,6 +123,7 @@ impl CourseTiming {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Course {
+    identifier: String,
     id: String,
     code: String,
     dept: String,
@@ -140,8 +141,12 @@ pub struct Course {
 }
 
 impl Course {
+    pub fn create_identifier(code: String, id: String, dept: String, section: String) -> String {
+        format!("{}-{}-{}-{}", code, id, dept, section)
+    }
+
     pub fn get_identifier(&self) -> String {
-        format!("{} {} {}-{}", self.code, self.id, self.dept, self.section)
+        format!("{}-{}-{}-{}", self.code, self.id, self.dept, self.section)
     }
 
     pub fn get_id(&self) -> &String {
@@ -377,7 +382,11 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     // Get notes
     let notes = group[6].trim().to_string().replace("<BR>", "\n");
 
+    // Create identifer 
+    let identifier = Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
+
     Course {
+        identifier,
         id,
         title,
         code,
