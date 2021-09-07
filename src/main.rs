@@ -51,7 +51,7 @@ const ADDRESS: &str = "0.0.0.0:8080";
 
 
 // Seconds per API update
-const API_UPDATE_INTERVAL: u64 = 120;
+const API_UPDATE_INTERVAL: u64 = 600;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 3;
 const FILE_INTERVAL_MULTIPLIER: u64 = 5;
 
@@ -110,7 +110,10 @@ async fn update_loop() -> std::io::Result<()> {
                         }
                     }
     
+                } else {
+                    time_until_description_update -= 1;
                 }
+
                 info!("Saving courses to memory...");
     
                 let mut lock = MEMORY_DATABASE.lock().await;
