@@ -485,10 +485,9 @@ pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: u
 }
 
 pub fn merge_courses(updated: &mut Vec<Course>, target: &mut Vec<Course>, start_index: usize) -> Vec<Course> {
-    let mut merged = Vec::new();
     let batch_size = updated.len();
 
-    merged = target.drain(..start_index).collect();
+    let mut merged: Vec<Course> = target.drain(..start_index).collect();
 
     merged.append(updated);
     
