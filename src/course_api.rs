@@ -454,7 +454,7 @@ pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: u
     
             let text = response.split("<b>Description</b>:").nth(1).unwrap_or("first").split("<p>").nth(0).unwrap_or("second").trim().to_string();
             
-            println!("{}", text);
+            println!("=========================================\n{}/{}: {}", i, batch_size, text);
                         
             descriptions.push((course.get_desc_api_str(), text));
     
