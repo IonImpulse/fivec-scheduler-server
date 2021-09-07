@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use lazy_static::*;
 use std::{sync::Arc, thread};
 use bimap::*;
+use rand::{thread_rng, Rng};
 
 mod course_api;
 mod database;
@@ -145,7 +146,9 @@ async fn update_loop() -> std::io::Result<()> {
             warn!("Errors have reached dangerous levels!! Currently at {} repeated errors...", number_of_repeated_errors);
         }
 
-        thread::sleep(Duration::from_secs(API_UPDATE_INTERVAL));
+        // Jitter to avoid rate limiting (possibly)
+        let jitter = thread_rng().gen_range(0..100);
+        thread::sleep(Duration::from_secs(API_UPDATE_INTERVAL + jitter));
     }
 }
 

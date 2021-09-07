@@ -1,6 +1,7 @@
 use ::serde::*;
 use chrono::*;
 use reqwest::*;
+use rand::{thread_rng, Rng};
 use std::{thread, time};
 use crate::database::*;
 
@@ -430,7 +431,7 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
 
 pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: usize, batch_size: usize) -> Result<Vec<Course>> {
     // Get data from CMC API
-    let mut i = 0;
+    let mut i: usize = 0;
     let mut api_calls: Vec<String> = Vec::new();
 
     let mut descriptions: Vec<(String, String)> = Vec::new();
@@ -457,8 +458,11 @@ pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: u
             println!("{}", text);
                         
             descriptions.push((course.get_desc_api_str(), text));
-    
-            thread::sleep(time::Duration::from_millis(1000));
+            
+            // Jitter to avoid rate limiting (possibly)
+            let jitter = thread_rng().gen_range(0..100);
+
+            thread::sleep(time::Duration::from_millis(1000 + jitter));
             i += 1;
         }
     }
