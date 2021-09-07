@@ -453,10 +453,12 @@ pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: u
             .await?;
     
             let text = response.split("<b>Description</b>:").nth(1).unwrap_or("first").split("<p>").nth(0).unwrap_or("second").trim().to_string();
-    
+            
+            println!("{}", text);
+                        
             descriptions.push((course.get_desc_api_str(), text));
     
-            thread::sleep(time::Duration::from_millis(100));
+            thread::sleep(time::Duration::from_millis(1000));
             i += 1;
         }
     }
