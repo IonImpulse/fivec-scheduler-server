@@ -89,30 +89,30 @@ async fn update_loop() -> std::io::Result<()> {
                 info!("Successfully updated courses!");
     
                 
-                if time_until_description_update == 0 {
-                    info!("Retreiving partial description info... (may take several minutes)");
-    
-                    time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-                    
-                    let course_desc_update = get_batch_descriptions(&final_course_update, description_number, DESCRIPTION_BATCH_SIZE).await;
-    
-                    if course_desc_update.is_err() {
-                        number_of_repeated_errors += 1;
-                        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
-                    } else {
-                        number_of_repeated_errors = 0;
-                        final_course_update = merge_courses(&mut course_desc_update.unwrap(), &mut final_course_update, description_number);
-
-                        description_number += DESCRIPTION_BATCH_SIZE;
-
-                        if description_number > final_course_update.len() {
-                            description_number = 0;
-                        }
-                    }
-    
-                } else {
-                    time_until_description_update -= 1;
-                }
+                //if time_until_description_update == 0 {
+                //    info!("Retreiving partial description info... (may take several minutes)");
+                //
+                //    time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
+                //    
+                //    let course_desc_update = get_batch_descriptions(&final_course_update, description_number, DESCRIPTION_BATCH_SIZE).await;
+                //
+                //    if course_desc_update.is_err() {
+                //        number_of_repeated_errors += 1;
+                //        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
+                //    } else {
+                //        number_of_repeated_errors = 0;
+                //        final_course_update = merge_courses(&mut course_desc_update.unwrap(), &mut final_course_update, description_number);
+                //
+                //        description_number += DESCRIPTION_BATCH_SIZE;
+                //
+                //        if description_number > final_course_update.len() {
+                //            description_number = 0;
+                //        }
+                //    }
+                //
+                //} else {
+                //    time_until_description_update -= 1;
+                //}
 
                 info!("Saving courses to memory...");
     
