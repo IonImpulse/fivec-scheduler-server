@@ -31,10 +31,10 @@ pub enum Day {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum School {
-    ClaremontMckennaCollege,
+    ClaremontMckenna,
     Pitzer,
     Pomona,
-    HarveyMuddCollege,
+    HarveyMudd,
     Scripps,
     Keck,
     ClaremontGraduate,
@@ -44,10 +44,10 @@ pub enum School {
 impl School {
     pub fn new_from_string(s: &str) -> School {
         match s {
-            "CM" | "CMC" => School::ClaremontMckennaCollege,
+            "CM" | "CMC" => School::ClaremontMckenna,
             "PZ" | "PIZ" => School::Pitzer,
             "PO" | "POM" => School::Pomona,
-            "HM" | "HMC" => School::HarveyMuddCollege,
+            "HM" | "HMC" => School::HarveyMudd,
             "SC" | "SCP" => School::Scripps,
             "KG" | "KEC" => School::Keck,
             "CG" | "CGU" => School::ClaremontGraduate,
