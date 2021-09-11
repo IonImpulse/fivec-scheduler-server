@@ -185,7 +185,9 @@ async fn async_main() -> std::io::Result<()> {
     HttpServer::new(|| {
         let cors = Cors::default()
             .allow_any_origin()
-            .allowed_methods(vec!["GET", "POST"])
+            .allow_any_header()
+            .allow_any_method()
+            .send_wildcard()
             .max_age(3600);
 
         App::new()
