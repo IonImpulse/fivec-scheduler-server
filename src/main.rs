@@ -14,10 +14,12 @@ use rand::{thread_rng, Rng};
 mod course_api;
 mod database;
 mod routes;
+mod scrape_descriptions;
 
 use course_api::*;
 use database::*;
 use routes::*;
+use scrape_descriptions::*;
 
 
 pub struct MemDatabase {
