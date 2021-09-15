@@ -1,6 +1,18 @@
 use crate::*;
 use actix_web::*;
+use ::serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
+struct ReturnCourses {
+    timestamp: u64,
+    courses: Vec<Course>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ReturnCourseList {
+    code: String,
+    courses: Vec<Course>,
+}
 
 /// A simple cache for courses
 /// @returns all courses in the cache for all schools at current term
@@ -30,7 +42,7 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
 
         drop(lock);
 
-        HttpResponse::Ok().json((last_change, courses))
+        HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses })
     } else {
         HttpResponse::Ok().json("No update needed")
     }
@@ -67,10 +79,10 @@ pub async fn get_course_list_by_code(path: web::Path<String>) -> HttpResponse {
 
     drop(lock);
 
-    let result = get_course_list(code, code_cache);
+    let result = get_course_list(code.clone(), code_cache);
 
     match result {
-        Some(result) => HttpResponse::Ok().json(result),
+        Some(result) => HttpResponse::Ok().json(ReturnCourseList { code, courses: result }),
         None => HttpResponse::Ok().json("Invalid code"),
     }
 }
