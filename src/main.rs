@@ -194,6 +194,7 @@ async fn async_main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
+            .wrap(actix_web::middleware::Compress::new(http::ContentEncoding::Gzip))
             .wrap(actix_web::middleware::Logger::default())
             .service(update_all_courses)
             .service(update_if_stale)
