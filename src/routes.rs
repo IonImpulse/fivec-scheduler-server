@@ -25,7 +25,7 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
 
     drop(lock);
 
-    HttpResponse::Ok().json((last_change, courses))
+    HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses })
 }
 
 /// Since the course cache updates only occasionally, this endpoint is used to
