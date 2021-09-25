@@ -50,8 +50,10 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
 
 #[post("/getUniqueCode")]
 pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
-    let course_list = post.into_inner();
+    let mut course_list = post.into_inner();
     
+    course_list.sort_by(|a, b| a.get_identifier().cmp(&b.get_identifier()));
+
     let lock = MEMORY_DATABASE.lock().await;
 
     let code_cache = lock.code_cache.clone();
