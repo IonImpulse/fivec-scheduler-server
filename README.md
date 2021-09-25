@@ -9,80 +9,52 @@ Currently, the following API methods are available:
 ### `GET` /fullUpdate
 `@returns` a JSON object with every single course in the Claremont colleges, guaranteed freshness of 1 minute or less.
 
-First entry is the timestamp of the last change
-
 Example:
 ```json
-
-[
-  1630347014,
-  [
-    {
-      "id": "010A",
-      "code": "AFRI",
-      "dept": "AF",
-      "section": "01",
-      "title": "Intro to Africana Studies",
-      "max_seats": 20,
-      "seats_taken": 20,
-      "seats_remaining": 0,
-      "credits": 0,
-      "status": "Closed",
-      "timing": [
-        {
-          "days": [
-            "Tuesday",
-            "Thursday"
-          ],
-          "start_time": "09:35:00",
-          "end_time": "10:50:00",
-          "location": {
-            "school": "Pomona",
-            "building": "LeBus Court",
-            "room": "113"
-          }
-        }
-      ],
-      "instructors": [
-        "Finley, Jessyka"
-      ],
-      "notes": "Instructor permission required.",
-      "description": ""
-    },
-    {
-      "id": "114",
-      "code": "AFRI",
-      "dept": "AF",
-      "section": "01",
-      "title": "Unruly Bodies:  Black Womanhood",
-      "max_seats": 20,
-      "seats_taken": 20,
-      "seats_remaining": 0,
-      "credits": 0,
-      "status": "Closed",
-      "timing": [
-        {
-          "days": [
-            "Tuesday"
-          ],
-          "start_time": "13:20:00",
-          "end_time": "16:20:00",
-          "location": {
-            "school": "Pomona",
-            "building": "Lincoln",
-            "room": "1109"
-          }
-        }
-      ],
-      "instructors": [
-        "Finley, Jessyka"
-      ],
-      "notes": "Letter grade only.",
-      "description": ""
-    },
-  ]
+{
+"timestamp": 1632558607,
+"courses": [
+  COURSE,
+  COURSE,
+  COURSE,
 ]
+}
 ```
+
+Where each COURSE is a JSON object, example below:
+```json
+{ 
+  "identifier": "AFRI-010A-AF-01",
+  "id": "010A",
+  "code": "AFRI",
+  "dept": "AF",
+  "section": "01",
+  "title": "Intro to Africana Studies",
+  "max_seats": 20,
+  "seats_taken": 20,
+  "seats_remaining": 0,
+  "credits": 0,
+  "status": "Closed",
+  "timing": [{
+     "days": ["Tuesday", "Thursday"],
+     "start_time": "09:35:00",
+     "end_time": "10:50:00",
+     "location": {
+        "school": "Pomona",
+        "building": "LeBus Court",
+        "room": "113"
+  }
+}
+```
+
+**Some things to note about courses**
+- Each *identifer* is unique, and should be used to select courses
+- The *status* of each course can be "Open", "Closed", or "Reopened"
+- In the *timing* list inside the course object, there can be multiple timing objects. As such,
+  - Each timing object has a start time and end time formatted as a 24 hour HH:MM:SS timestamp
+  - Each timing object has a list of days that those start/end times will apply to, consisting of
+    - "Monday", "Tuesday", "Wednesday", "Thursday", or "Friday" 
+  - If a class does not have a set time, both the start time and end time will be 00:00:00
 
 ### `GET` /updateIfStale/{unix_timestamp}
 `@params` timestamp from last update
