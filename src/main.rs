@@ -76,20 +76,23 @@ async fn update_loop() -> std::io::Result<()> {
 
         info!("Retrieving course info...");
         let course_update = get_all_courses().await;
+        let number_of_courses: usize;
 
         if course_update.is_err() {
             number_of_repeated_errors += 1;
+            number_of_courses = 0;
             error!("Error getting courses: {}", course_update.unwrap_err());
         } else {
             let mut final_course_update: Vec<Course> = course_update.unwrap();
 
             if final_course_update.is_empty() {
                 number_of_repeated_errors += 1;
+                number_of_courses = 0;
                 error!("No courses found!");
             } else {
                 number_of_repeated_errors = 0;
                 info!("Successfully updated courses!");
-    
+                number_of_courses = final_course_update.len();
                 
                 //if time_until_description_update == 0 {
                 //    info!("Retreiving partial description info... (may take several minutes)");
@@ -128,7 +131,7 @@ async fn update_loop() -> std::io::Result<()> {
                 info!("Saved courses to memory!")    
             }   
         }
-        info!("Finished schedule update!");
+        info!("Finished schedule update with {} courses!", number_of_courses);
 
         if time_until_file_save == 0 {
             time_until_file_save = FILE_INTERVAL_MULTIPLIER;
@@ -209,7 +212,7 @@ async fn async_main() -> std::io::Result<()> {
 
 
 fn main() {
-    std::env::set_var("RUST_LOG", "info,trace");
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     ctrlc::set_handler(move || {
