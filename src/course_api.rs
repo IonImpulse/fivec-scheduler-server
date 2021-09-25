@@ -379,8 +379,16 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
 
     // Get instructors
     let instructors: Vec<String> = group[5].split("<BR>").map(|x| {
-        let temp_instructor: Vec<&str> = x.split(",").collect();
-        format!("{} {}", temp_instructor[1], temp_instructor[0])
+        let to_return: String;
+
+        if x.contains(",") {
+            let temp_instructor: Vec<&str> = x.split(",").collect();
+            to_return = format!("{} {}", temp_instructor[1], temp_instructor[0]);
+        } else {
+            to_return = x.to_string();
+        }
+        
+        to_return
     }).collect();
 
     // Get notes
