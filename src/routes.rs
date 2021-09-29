@@ -73,7 +73,7 @@ pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
 
 #[get("/getCourseListByCode/{code}")]
 pub async fn get_course_list_by_code(path: web::Path<String>) -> HttpResponse {
-    let code = path.into_inner();
+    let code = path.into_inner().to_uppercase();
     
     let lock = MEMORY_DATABASE.lock().await;
 
