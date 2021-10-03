@@ -2,7 +2,6 @@ use crate::course_api::*;
 use std::fs::{OpenOptions};
 use std::io::{Write, Read, Error};
 use bimap::*;
-use ::serde::{Serialize, Deserialize};
 
 use rand::{SeedableRng};
 use rand::rngs::SmallRng;
@@ -80,7 +79,7 @@ pub fn generate_unique_code(course_list: Vec<Course>, code_hashmap: BiHashMap<St
     loop {
         let mut attempt: Vec<char> = Vec::new();
         
-        for i in 0..CODE_LENGTH {
+        for _ in 0..CODE_LENGTH {
             attempt.push(POSSIBLE_CODE_CHARS.choose(&mut small_rng).unwrap().clone());
         }
 

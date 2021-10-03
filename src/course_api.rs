@@ -4,10 +4,9 @@ use reqwest::*;
 use rand::{thread_rng, Rng};
 use std::{thread, time};
 use crate::database::*;
+use crate::scrape_descriptions::*;
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
-const DESCRIPTIONS_API_URL: &str =
-    "https://webapps.cmc.edu/course-search/get_desc.php?Course=";
 const TIME_FMT: &str = "%I:%M%p";
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -207,7 +206,7 @@ impl Course {
         format!("{}{} {}", self.code, self.id, self.dept)
     }
 
-    pub fn add_description(&mut self, description: String) {
+    pub fn set_description(&mut self, description: String) {
         self.description = description
     }
 
@@ -440,78 +439,13 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
     Ok(courses)
 }
 
-pub async fn get_batch_descriptions(courses: &Vec<Course>, description_number: usize, batch_size: usize) -> Result<Vec<Course>> {
-    // Get data from CMC API
-    let mut i: usize = 0;
-    let mut api_calls: Vec<String> = Vec::new();
-
-    let mut descriptions: Vec<(String, String)> = Vec::new();
-
-    for course in courses[description_number..description_number+batch_size].iter() {
-        if !api_calls.contains(&course.get_desc_api_str()) {
-            let url = format!(
-                "{}{}",
-                DESCRIPTIONS_API_URL,
-                course.get_desc_api_str()
-            ); 
-    
-            api_calls.push(course.get_desc_api_str());
-    
-            println!("{}: {}", i, url);
-    
-            let response = reqwest::get(url)
-            .await?
-            .text()
-            .await?;
-    
-            let text = response.split("<b>Description</b>:").nth(1).unwrap_or("first").split("<p>").nth(0).unwrap_or("second").trim().to_string();
-            
-            println!("=========================================\n{}/{}: {}", i, batch_size, text);
-                        
-            descriptions.push((course.get_desc_api_str(), text));
-            
-            // Jitter to avoid rate limiting (possibly)
-            let jitter = thread_rng().gen_range(0..100);
-
-            thread::sleep(time::Duration::from_millis(1000 + jitter));
-            i += 1;
-        }
-    }
-
-    let mut description_courses: Vec<Course> = Vec::new();
-
-    for course in courses[description_number..description_number+batch_size].iter()  {
-        let course_description_str = course.get_desc_api_str();
-
-        let description = &descriptions.iter().find(|x| x.0 == course_description_str).unwrap().1;
-
-        let mut course_description = course.clone();
-        course_description.add_description(description.to_owned());
-
-        description_courses.push(course_description);
-    }
-    
-    Ok(description_courses)
-
-}
-
-pub fn merge_courses(updated: &mut Vec<Course>, target: &mut Vec<Course>, start_index: usize) -> Vec<Course> {
-    let batch_size = updated.len();
-
-    let mut merged: Vec<Course> = target.drain(..start_index).collect();
-
-    merged.append(updated);
-    
-    merged.drain(start_index + batch_size..);
-
-    merged
-}
-
 pub async fn test_full_update() {
-    let all_descriptions = get_all_courses().await.unwrap();
-    let all_descriptions = get_batch_descriptions(&all_descriptions, 0, all_descriptions.len()).await.unwrap();
+    let all_courses = get_all_courses().await.unwrap();
+    let all_descriptions = scrape_all_descriptions().await.unwrap();
 
-    save_course_database(all_descriptions.clone()).unwrap();
+    let all_courses_with_descriptions = merge_description_into_courses(all_courses, all_descriptions);
 
-    assert_eq!(all_descriptions, load_course_database().unwrap())
+    save_course_database(all_courses_with_descriptions.clone()).unwrap();
+
+    assert_eq!(all_courses_with_descriptions, load_course_database().unwrap())
 }

@@ -54,22 +54,15 @@ const ADDRESS: &str = "0.0.0.0:8080";
 
 // Seconds per API update
 const API_UPDATE_INTERVAL: u64 = 600;
-const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 3;
-const FILE_INTERVAL_MULTIPLIER: u64 = 5;
-
-// How many descriptions to update at once
-const DESCRIPTION_BATCH_SIZE: usize = 10;
+const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 100;
 
 pub fn get_unix_timestamp() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
-
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
-    let mut time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-    let mut time_until_file_save = FILE_INTERVAL_MULTIPLIER;
-    let mut description_number = 0;
+    let mut time_until_description_update = 0;
 
     loop {
         info!("Starting schedule API update...");
@@ -94,33 +87,38 @@ async fn update_loop() -> std::io::Result<()> {
                 info!("Successfully updated courses!");
                 number_of_courses = final_course_update.len();
                 
-                //if time_until_description_update == 0 {
-                //    info!("Retreiving partial description info... (may take several minutes)");
-                //
-                //    time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
-                //    
-                //    let course_desc_update = get_batch_descriptions(&final_course_update, description_number, DESCRIPTION_BATCH_SIZE).await;
-                //
-                //    if course_desc_update.is_err() {
-                //        number_of_repeated_errors += 1;
-                //        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
-                //    } else {
-                //        number_of_repeated_errors = 0;
-                //        final_course_update = merge_courses(&mut course_desc_update.unwrap(), &mut final_course_update, description_number);
-                //
-                //        description_number += DESCRIPTION_BATCH_SIZE;
-                //
-                //        if description_number > final_course_update.len() {
-                //            description_number = 0;
-                //        }
-                //    }
-                //
-                //} else {
-                //    time_until_description_update -= 1;
-                //}
+                if time_until_description_update == 0 {
+                    info!("Retreiving description info... (may take several minutes)");
+                
+                    time_until_description_update = DESCRIPTION_INTERVAL_MULTIPLIER;
+                    
+                    let course_desc_update = scrape_all_descriptions().await;
+                    
+                    if course_desc_update.is_err() {
+                        number_of_repeated_errors += 1;
+                        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
+                    } else {
+                        number_of_repeated_errors = 0;
+
+                        final_course_update = merge_description_into_courses(final_course_update, course_desc_update.unwrap());
+
+                        save_course_database(final_course_update.clone()).unwrap();
+
+                        info!("Successfully updated descriptions!");
+                    }
+                
+                } else {
+                    time_until_description_update -= 1;
+                }
 
                 info!("Saving courses to memory...");
-    
+                
+                let lock = MEMORY_DATABASE.lock().await;
+                let previous_courses = lock.course_cache.clone();
+                drop(lock);
+
+                let final_course_update = merge_courses(previous_courses, final_course_update);
+
                 let mut lock = MEMORY_DATABASE.lock().await;
     
                 lock.course_cache = final_course_update;
@@ -132,23 +130,6 @@ async fn update_loop() -> std::io::Result<()> {
             }   
         }
         info!("Finished schedule update with {} courses!", number_of_courses);
-
-        if time_until_file_save == 0 {
-            time_until_file_save = FILE_INTERVAL_MULTIPLIER;
-
-            info!("Saving caches to file...");
-
-            let lock = MEMORY_DATABASE.lock().await;
-
-            let _ = save_course_database(lock.course_cache.clone());
-            let _ = save_code_database(lock.code_cache.clone());
-
-            drop(lock);
-
-            info!("Saved cache to file!");
-        } else {
-            time_until_file_save -= 1;
-        }
 
         if number_of_repeated_errors > 5 {
             warn!("Errors have reached dangerous levels!! Currently at {} repeated errors...", number_of_repeated_errors);
