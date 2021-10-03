@@ -126,7 +126,18 @@ async fn update_loop() -> std::io::Result<()> {
     
                 drop(lock);
                 
-                info!("Saved courses to memory!")    
+                info!("Saved courses to memory!");
+                
+                info!("Saving caches to file...");
+
+                let lock = MEMORY_DATABASE.lock().await;
+
+                let _ = save_course_database(lock.course_cache.clone());
+                let _ = save_code_database(lock.code_cache.clone());
+
+                drop(lock);
+
+                info!("Saved cache to file!");
             }   
         }
         info!("Finished schedule update with {} courses!", number_of_courses);
