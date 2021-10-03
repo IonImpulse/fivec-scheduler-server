@@ -274,7 +274,7 @@ pub fn merge_description_into_courses(
 
 pub fn merge_courses(previous: Vec<Course>, new: Vec<Course>) -> Vec<Course> {
     let mut return_vec: Vec<Course> = Vec::new();
-
+    info!("Running over {} x {}", previous.len(), new.len());
     for new_course in new {
         for previous_course in &previous {
             if new_course.get_identifier() == previous_course.get_identifier() {
