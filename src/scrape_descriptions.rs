@@ -279,9 +279,10 @@ pub fn merge_courses(previous: Vec<Course>, new: Vec<Course>) -> Vec<Course> {
         for previous_course in &previous {
             if new_course.get_identifier() == previous_course.get_identifier() {
                 let mut final_course = new_course.clone();
-
+                info!("[{}]", final_course.get_identifier());
                 if new_course.get_description().len() < previous_course.get_description().len() {
                     final_course.set_description(previous_course.get_description());
+                    info!("Setting new description!");
                 }
 
                 return_vec.push(final_course);
