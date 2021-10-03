@@ -177,6 +177,16 @@ pub fn extract_identifier_description_pair(
     Ok(return_vec)
 }
 
+pub async fn reqwest_get_ignore_ssl(url: &str) -> Result<reqwest::Response> {
+    reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .unwrap()
+        .get(url)
+        .send()
+        .await
+}
+
 pub async fn scrape_url(url_fn: fn(u64) -> String, style: u8) -> Result<Vec<IdentifierDescriptionPair>> {
     let mut return_vec = Vec::new();
     let mut page_num = 1;
@@ -184,7 +194,7 @@ pub async fn scrape_url(url_fn: fn(u64) -> String, style: u8) -> Result<Vec<Iden
 
     while continue_scraping {
         info!("Scraping page {}", page_num);
-        let response = reqwest::get(url_fn(page_num))
+        let response = reqwest_get_ignore_ssl(&url_fn(page_num))
             .await?
             .text()
             .await?;
