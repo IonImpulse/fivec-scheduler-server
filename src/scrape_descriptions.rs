@@ -43,12 +43,12 @@ pub fn hmc_url(page_num: u64) -> String {
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn cmc_url(page_num: u64) -> String {
-    format!("https://catalog.claremontmckenna.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=29&expand=1&navoid=4499&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
+    format!("http://catalog.claremontmckenna.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=29&expand=1&navoid=4499&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn pomona_url(page_num: u64) -> String {
-    format!("https://catalog.pomona.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=40&expand=1&navoid=8092&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
+    format!("http://catalog.pomona.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=40&expand=1&navoid=8092&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
