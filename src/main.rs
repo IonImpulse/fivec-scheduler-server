@@ -117,8 +117,9 @@ async fn update_loop() -> std::io::Result<()> {
                 let previous_courses = lock.course_cache.clone();
                 drop(lock);
 
+                info!("Merging courses...");
                 let final_course_update = merge_courses(previous_courses, final_course_update);
-
+                info!("Merged!");
                 let mut lock = MEMORY_DATABASE.lock().await;
     
                 lock.course_cache = final_course_update;
