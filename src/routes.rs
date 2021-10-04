@@ -37,6 +37,7 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
     if &lock.last_change != &unix_timestamp_seconds {
+        info!("Serving course update!");
         let courses = lock.course_cache.clone();
         let last_change = lock.last_change.clone();
 
@@ -44,6 +45,7 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
 
         HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses })
     } else {
+        info!("No course update needed!");
         HttpResponse::Ok().json("No update needed")
     }
 }
