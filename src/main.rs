@@ -62,7 +62,7 @@ pub fn get_unix_timestamp() -> u64 {
 
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
-    let mut time_until_description_update = 0;
+    let mut time_until_description_update = 1;
 
     loop {
         info!("Starting schedule API update...");
@@ -120,6 +120,7 @@ async fn update_loop() -> std::io::Result<()> {
                 info!("Merging courses...");
                 let final_course_update = merge_courses(previous_courses, final_course_update);
                 info!("Merged!");
+
                 let mut lock = MEMORY_DATABASE.lock().await;
     
                 lock.course_cache = final_course_update;

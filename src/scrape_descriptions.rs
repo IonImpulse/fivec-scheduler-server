@@ -274,19 +274,19 @@ pub fn merge_description_into_courses(
 
 pub fn merge_courses(previous: Vec<Course>, new: Vec<Course>) -> Vec<Course> {
     let mut return_vec: Vec<Course> = Vec::new();
-
+    info!("Running over {} x {}", previous.len(), new.len());
     for new_course in new {
+        let mut final_course = new_course.clone();
+
         for previous_course in &previous {
-            if new_course.get_identifier() == previous_course.get_identifier() {
-                let mut final_course = new_course.clone();
-
-                if new_course.get_description().len() < previous_course.get_description().len() {
+            if final_course.get_identifier() == previous_course.get_identifier() {
+                if final_course.get_description().len() < previous_course.get_description().len() {
                     final_course.set_description(previous_course.get_description());
-                }
-
-                return_vec.push(final_course);
+                }                
             }
         }
+
+        return_vec.push(final_course);
     }
 
     return_vec
