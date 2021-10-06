@@ -79,13 +79,14 @@ pub fn extract_identifier_description_pair(
 
         let mut split_line = current_line.split("</h3>").collect::<Vec<&str>>();
 
-        let identifier = split_line
+        let mut identifier = split_line
             .remove(0)
-            .split(" - ")
+            .split(" -")
             .nth(0)
             .unwrap()
-            .trim()
             .to_string();
+
+        identifier.retain(|c| !c.is_whitespace());
         
         
         if split_line.len() == 0 || identifier.replace("-", "").trim() == "" {
@@ -260,14 +261,17 @@ pub fn merge_description_into_courses(
     let mut return_vec: Vec<Course> = Vec::new();
 
     for course in courses {
-        if descriptions.contains_key(&course.get_desc_api_str()) {
+        if descriptions.contains_key(&course.get_desc_scrape_str()) {
             let mut new_course = course.clone();
-            new_course.set_description(descriptions.get(&course.get_desc_api_str()).unwrap().to_string());
+            new_course.set_description(descriptions.get(&course.get_desc_scrape_str()).unwrap().to_string());
             return_vec.push(new_course);
         } else {
             return_vec.push(course);
         }
     }
+
+    let total_added_descs = return_vec.clone().into_iter().filter(|x| x.get_description().len() > 1).count();
+    println!("{}/{} courses have descriptions!", total_added_descs, return_vec.len());
 
     return_vec
 }

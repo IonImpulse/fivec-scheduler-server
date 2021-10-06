@@ -235,6 +235,10 @@ impl Course {
         format!("{}{} {}", self.code, self.id, self.dept)
     }
 
+    pub fn get_desc_scrape_str(&self) -> String {
+        format!("{}{}{}", self.code, self.id, self.dept)
+    }
+
     pub fn set_description(&mut self, description: String) {
         self.description = description
     }
