@@ -15,12 +15,13 @@ mod course_api;
 mod database;
 mod routes;
 mod scrape_descriptions;
+mod compute_timings;
 
 use course_api::*;
 use database::*;
 use routes::*;
 use scrape_descriptions::*;
-
+use compute_timings::*;
 
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,

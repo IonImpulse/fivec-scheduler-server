@@ -81,6 +81,19 @@ impl Day {
             _ => '0',
         }
     }
+
+    pub fn to_index(&self) -> usize {
+        match self {
+            Day::Monday => 0,
+            Day::Tuesday => 1,
+            Day::Wednesday => 2,
+            Day::Thursday => 3,
+            Day::Friday => 4,
+            Day::Saturday => 5,
+            Day::Sunday => 6,
+            _ => 0,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -118,6 +131,18 @@ impl CourseTiming {
 
     pub fn get_end_time_str(&self) -> String {
         format!("{}", self.end_time.format(TIME_FMT))
+    }
+
+    pub fn get_days(&self) -> Vec<Day> {
+        self.days.clone()
+    }
+
+    pub fn get_start_time_index(&self) -> u32 {
+        self.start_time.hour() + (self.start_time.minute() * 60)
+    }
+
+    pub fn get_end_time_index(&self) -> u32 {
+        self.end_time.hour() + (self.end_time.minute() * 60)
     }
 }
 
@@ -183,6 +208,10 @@ impl Course {
 
     pub fn get_credits(&self) -> &u64 {
         &self.credits
+    }
+
+    pub fn get_timings(&self) -> Vec<CourseTiming> {
+        self.timing.clone()
     }
 
     pub fn get_timing_minimal(&self) -> String {
