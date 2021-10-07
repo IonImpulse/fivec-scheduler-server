@@ -63,7 +63,7 @@ pub fn get_unix_timestamp() -> u64 {
 
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
-    let mut time_until_description_update = 0;
+    let mut time_until_description_update = 1;
 
     loop {
         info!("Starting schedule API update...");
@@ -161,7 +161,7 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    //test_full_update().await;
+    test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();

@@ -13,6 +13,9 @@ use log::{info, error};
 use reqwest::*;
 use std::collections::HashMap;
 use crate::course_api::*;
+use regex::Regex;
+use lazy_static::lazy_static;
+use escaper::*;
 
 // Simple pair that can be used to merge into actual course data
 // "Classic Identifier" refers to the college's way of identifying the course:
@@ -170,9 +173,27 @@ pub fn extract_identifier_description_pair(
             description = String::from("");
         }
         
+        // Remove HTML while preserving what is inside of
+        // links/bolded
+        lazy_static! {
+            static ref RE_HTML: Regex = Regex::new(r"<[^>]+>").unwrap();
+            static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
+        }
+
+        let description = RE_HTML.replace_all(&description, "").to_string();
+
+        // Replace all multiple spaces with a single one
+        let description = RE_SPACES.replace_all(&description, " ").to_string();
+
+        // Remove HTML entities
+        let description = match decode_html(&description) {
+            Err(_) => description,
+            Ok(s) => s
+        };
+
         info!("[{}]\n{}\n", identifier, description);
 
-        return_vec.push(IdentifierDescriptionPair::new(identifier, description));
+        return_vec.push(IdentifierDescriptionPair::new(identifier, description.to_string()));
     }
 
     Ok(return_vec)

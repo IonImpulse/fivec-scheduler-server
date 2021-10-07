@@ -508,6 +508,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "entities"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5320ae4c3782150d900b79807611a59a99fc9a1d61d686faafc24b93fc8d7ca"
+
+[[package]]
 name = "env_logger"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -521,6 +527,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "escaper"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a53eb97b7349ba1bdb31839eceafe9aaae8f1d8d944dc589b67fb0b26e1c1666"
+dependencies = [
+ "entities",
+]
+
+[[package]]
 name = "fivec-scheduler-server"
 version = "0.1.0"
 dependencies = [
@@ -530,11 +545,13 @@ dependencies = [
  "chrono",
  "ctrlc",
  "env_logger",
+ "escaper",
  "futures",
  "lazy_static",
  "log",
  "openssl",
  "rand",
+ "regex",
  "reqwest",
  "ron",
  "serde",
