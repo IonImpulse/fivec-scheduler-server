@@ -26,7 +26,7 @@ use compute_timings::*;
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
     pub last_change: u64,
-    pub code_cache: BiHashMap<String, Vec<Course>>
+    pub code_cache: BiHashMap<String, SharedCourseList>
 }
 
 impl MemDatabase {

@@ -117,6 +117,21 @@ pub struct CourseTiming {
     location: Location,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct SharedCourseList {
+    local_courses: Vec<Course>,
+    custom_courses: Vec<Course>,
+}
+
+impl SharedCourseList {
+    pub fn new(local_courses: Vec<Course>, custom_courses: Vec<Course>) -> Self {
+        SharedCourseList {
+            local_courses,
+            custom_courses,
+        }
+    }
+}
+
 impl CourseTiming {
     pub fn get_days_code(&self) -> String {
         self.days.iter().map(|x| x.to_char()).collect::<String>()

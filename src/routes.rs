@@ -11,7 +11,7 @@ struct ReturnCourses {
 #[derive(Debug, Serialize, Deserialize)]
 struct ReturnCourseList {
     code: String,
-    courses: Vec<Course>,
+    courses: SharedCourseList,
 }
 
 /// A simple cache for courses
@@ -51,10 +51,16 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
 }
 
 #[post("/getUniqueCode")]
-pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
-    let mut course_list = post.into_inner();
+pub async fn get_unique_code(post: web::Json<(Vec<Course>, Vec<Course>)>,) -> HttpResponse {
+    let course_list_tuple = post.into_inner();
     
-    course_list.sort_by(|a, b| a.get_identifier().cmp(&b.get_identifier()));
+    let mut local_courses = course_list_tuple.0;
+    let mut custom_courses = course_list_tuple.1;
+
+    local_courses.sort_by(|a, b| a.get_identifier().cmp(&b.get_identifier()));
+    custom_courses.sort_by(|a, b| a.get_identifier().cmp(&b.get_identifier()));
+
+    let shared_course_list = SharedCourseList::new(local_courses, custom_courses);
 
     let lock = MEMORY_DATABASE.lock().await;
 
@@ -62,7 +68,7 @@ pub async fn get_unique_code(post: web::Json<Vec<Course>>,) -> HttpResponse {
 
     drop(lock);
 
-    let (code, updated_code_cache) = generate_unique_code(course_list, code_cache);
+    let (code, updated_code_cache) = generate_unique_code(shared_course_list, code_cache);
 
     let mut lock = MEMORY_DATABASE.lock().await;
 
