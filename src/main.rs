@@ -177,9 +177,9 @@ async fn async_main() -> std::io::Result<()> {
     let mut builder =
         SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
-        .set_private_key_file("/etc/letsencrypt/live/api.5cheduler.com/privkey.pem", SslFiletype::PEM)
+        .set_private_key_file("/etc/letsencrypt/live/api.5scheduler.io/privkey.pem", SslFiletype::PEM)
         .unwrap();
-    builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5cheduler.com/fullchain.pem").unwrap();
+    builder.set_certificate_chain_file("/etc/letsencrypt/live/api.5scheduler.io/fullchain.pem").unwrap();
 
 
     HttpServer::new(|| {
@@ -217,7 +217,7 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    info!("5cheduler Server starting up...");
+    info!("5scheduler Server starting up...");
 
     let _ = actix_web::rt::System::with_tokio_rt(|| {
         tokio::runtime::Builder::new_multi_thread()

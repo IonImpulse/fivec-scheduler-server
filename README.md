@@ -1,8 +1,8 @@
-# 5cheduler Server & API
-This repository contains the code that runs in a VPS and serves https://www.5cheduler.com.
+# 5scheduler Server & API
+This repository contains the code that runs in a VPS and serves https://www.5scheduler.io.
 Additionally, this server also exposes an API that anyone can use for their own projects (within reason).
 
-Live API at: https://api.5cheduler.com
+Live API at: https://api.5scheduler.io
 
 
 Currently, the following API methods are available:
