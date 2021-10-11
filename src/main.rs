@@ -207,7 +207,7 @@ async fn async_main() -> std::io::Result<()> {
 
 
 fn main() {
-    std::env::set_var("RUST_LOG", "info");
+    std::env::set_var("RUST_LOG", "info, actix_web=trace");
     env_logger::init();
 
     ctrlc::set_handler(move || {
