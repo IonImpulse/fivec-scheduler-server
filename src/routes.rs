@@ -53,7 +53,6 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
 #[post("/getUniqueCode")]
 pub async fn get_unique_code(post: web::Json<Vec<Vec<Course>>>,) -> HttpResponse {
     let course_list_tuple = post.into_inner();
-    println!("{:?}", course_list_tuple);
     let mut local_courses = course_list_tuple[0].clone();
     let mut custom_courses = course_list_tuple[1].clone();
 
