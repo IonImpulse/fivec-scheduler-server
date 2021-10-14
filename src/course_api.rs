@@ -363,7 +363,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }
 
     // Get credits
-    let credits = group[3].trim().parse::<u64>().unwrap_or(0) * 100;
+    let credits: u64 = (group[3].trim().parse::<f64>().unwrap_or(0.) * 100.).floor() as u64;
 
     // Get timing(s)
     let mut timing = Vec::new();
