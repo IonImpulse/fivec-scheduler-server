@@ -74,7 +74,7 @@ pub fn save_code_database(code_hashmap: BiHashMap<String, SharedCourseList>) -> 
 }
 
 pub fn load_locations_database() -> Result<HashMap<String, (String, String)>, Error> {
-    let file = OpenOptions::new().read(true).open(CODE_DATA_NAME);
+    let file = OpenOptions::new().read(true).open(LOCATION_NAME);
 
     if file.is_err() {
         return Ok(HashMap::new());
@@ -87,6 +87,7 @@ pub fn load_locations_database() -> Result<HashMap<String, (String, String)>, Er
         Ok(locations)
     }
 }
+
 
 pub fn generate_unique_code(
     shared_course_list: SharedCourseList,
