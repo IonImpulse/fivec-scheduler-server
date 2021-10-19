@@ -4,6 +4,7 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::process::exit;
+use std::collections::HashMap;
 use log::*;
 use tokio::sync::Mutex;
 use lazy_static::*;
@@ -16,17 +17,20 @@ mod database;
 mod routes;
 mod scrape_descriptions;
 mod compute_timings;
+mod locations;
 
 use course_api::*;
 use database::*;
 use routes::*;
 use scrape_descriptions::*;
 use compute_timings::*;
+use locations::*;
 
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
     pub last_change: u64,
-    pub code_cache: BiHashMap<String, SharedCourseList>
+    pub code_cache: BiHashMap<String, SharedCourseList>,
+    pub locations_cache: HashMap<String, (String, String)>,
 }
 
 impl MemDatabase {
@@ -35,6 +39,7 @@ impl MemDatabase {
             course_cache: Vec::new(),
             last_change: get_unix_timestamp(),
             code_cache: BiHashMap::new(),
+            locations_cache: HashMap::new(),
         }
     }
 }
@@ -161,11 +166,12 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    //test_full_update().await;
+    // test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();
     lock.code_cache = load_code_database().unwrap();
+    lock.locations_cache = load_locations_database().unwrap();
     drop(lock);
 
     info!("Database(s) loaded!");
@@ -198,6 +204,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(update_if_stale)
             .service(get_unique_code)
             .service(get_course_list_by_code)
+            .service(get_locations_database)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()

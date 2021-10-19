@@ -95,3 +95,14 @@ pub async fn get_course_list_by_code(path: web::Path<String>) -> HttpResponse {
         None => HttpResponse::Ok().json("Invalid code"),
     }
 }
+
+#[get("/getLocations")]
+pub async fn get_locations_database(path: web::Path<()>) -> HttpResponse {
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let locations = lock.locations_cache.clone();
+
+    drop(lock);
+
+    HttpResponse::Ok().json(locations)
+}

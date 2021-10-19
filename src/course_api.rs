@@ -5,6 +5,9 @@ use rand::{thread_rng, Rng};
 use std::{thread, time};
 use crate::database::*;
 use crate::scrape_descriptions::*;
+use crate::locations::*;
+use std::fs::OpenOptions;
+use std::io::{Error, Read, Write};
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
 const TIME_FMT: &str = "%I:%M%p";
@@ -107,6 +110,10 @@ impl Location {
     pub fn get_minimal_location(&self) -> String {
         format!("{} {}", self.building, self.room)
     }
+
+    pub fn get_full_location(&self) -> (School, String, String) {
+        (self.school.clone(), self.building.clone(), self.room.clone())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -138,6 +145,10 @@ impl CourseTiming {
     }
     pub fn get_minimal_location(&self) -> String {
         self.location.get_minimal_location()
+    }
+
+    pub fn get_full_location(&self) -> (School, String, String) {
+        self.location.get_full_location()
     }
 
     pub fn get_start_time_str(&self) -> String {
@@ -489,6 +500,17 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
 
 pub async fn test_full_update() {
     let all_courses = get_all_courses().await.unwrap();
+    let locations = get_locations(all_courses.clone()).await;
+
+    let mut writer = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("locations.json").unwrap();
+
+    let serialized_output = serde_json::to_string(&locations).unwrap();
+
+    writer.write(serialized_output.as_bytes());
+
     let all_descriptions = scrape_all_descriptions().await.unwrap();
 
     let all_courses_with_descriptions = merge_description_into_courses(all_courses, all_descriptions);

@@ -2,13 +2,14 @@ use crate::course_api::*;
 use bimap::*;
 use std::fs::OpenOptions;
 use std::io::{Error, Read, Write};
-
+use std::collections::HashMap;
 use rand::prelude::SliceRandom;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 
 const COURSE_DATABASE_NAME: &str = "./course_cache.json";
 const CODE_DATA_NAME: &str = "./code_data.json";
+const LOCATION_NAME: &str = "./locations.json";
 
 const POSSIBLE_CODE_CHARS: &'static [char] = &[
     '2', '3', '4', '6', '7', '9', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P', 'A', 'D', 'F', 'G', 'H',
@@ -70,6 +71,21 @@ pub fn save_code_database(code_hashmap: BiHashMap<String, SharedCourseList>) -> 
     writer.write(serialized_output.as_bytes())?;
 
     Ok(())
+}
+
+pub fn load_locations_database() -> Result<HashMap<String, (String, String)>, Error> {
+    let file = OpenOptions::new().read(true).open(CODE_DATA_NAME);
+
+    if file.is_err() {
+        return Ok(HashMap::new());
+    } else {
+        let mut file = file.unwrap();
+
+        let mut data = String::new();
+        file.read_to_string(&mut data)?;
+        let locations: HashMap<String, (String, String)> = from_slice_lenient(&data.as_bytes()).unwrap();
+        Ok(locations)
+    }
 }
 
 pub fn generate_unique_code(
