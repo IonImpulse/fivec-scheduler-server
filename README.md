@@ -23,7 +23,7 @@ Example:
 
 Where each COURSE is a JSON object, example below:
 ```json
-{ 
+{
   "identifier": "AFRI-010A-AF-01",
   "id": "010A",
   "code": "AFRI",
@@ -35,20 +35,31 @@ Where each COURSE is a JSON object, example below:
   "seats_remaining": 0,
   "credits": 0,
   "status": "Closed",
-  "timing": [{
-     "days": ["Tuesday", "Thursday"],
-     "start_time": "09:35:00",
-     "end_time": "10:50:00",
-     "location": {
+  "timing": [
+    {
+      "days": [
+        "Tuesday",
+        "Thursday"
+      ],
+      "start_time": "09:35:00",
+      "end_time": "10:50:00",
+      "location": {
         "school": "Pomona",
         "building": "LeBus Court",
         "room": "113"
-  }
-}
+      }
+    }
+  ],
+  "instructors": [
+    " Jessyka Finley"
+  ],
+  "notes": "Instructor permission required.",
+  "description": "This class will serve as a general introduction to Africana Studies. Africana studies, while still relatively young, has a vibrant history that traces the lives and scholarship of people from African descent. Its complex and latent development in academia follows from the socio-political marginalization of people within the African diaspora. Nevertheless, resilience and perseverance will be repeated themes as we study how, through different techniques and modes of understanding, people of the African diaspora have continually challenged the western hegemony of academic study."
+},
 ```
 
 **Some things to note about courses**
-- Each *identifer* is unique, and should be used to select courses
+- Each *identifier* is unique, and should be used to select courses
 - The *status* of each course can be "Open", "Closed", or "Reopened"
 - In the *timing* list inside the course object, there can be multiple timing objects. As such,
   - Each timing object has a start time and end time formatted as a 24 hour HH:MM:SS timestamp
