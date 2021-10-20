@@ -274,7 +274,7 @@ impl Course {
     }
 }
 
-pub fn get_rows_clean(raw_text: String) -> Option<Vec<String>> {
+pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
     // Split at start of table and end, taking only the rows
     let rows: Vec<&str> = raw_text
         .split_at(raw_text.find("<tbody>")?)
@@ -474,16 +474,29 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }
 }
 
-pub async fn get_all_courses() -> Result<Vec<Course>> {
+pub fn get_term(raw_text: &String) -> Option<&str> {
+    let term = raw_text.split("</h4>").nth(0);
+
+    if term.is_none() {
+        return term;
+    } else {
+        return term.unwrap().split("<h4>Course Search Results - ").nth(1);
+    }
+}
+
+pub async fn get_all_courses() -> Result<(String, Vec<Course>)> {
     // Get data from CMC API
     let response = reqwest::get(SCHEDULE_API_URL).await?;
     let data = response.text().await?;
 
+    // Get term
+    let term = get_term(&data);
+    
     // Clean raw html data
-    let html_rows = get_rows_clean(data);
+    let html_rows = get_rows_clean(&data);
 
-    if html_rows.is_none() {
-        return Ok(Vec::new())
+    if html_rows.is_none() || term.is_none() {
+        return Ok(("".to_string(), Vec::new()))
     }
 
     // Group rows into courses
@@ -495,11 +508,14 @@ pub async fn get_all_courses() -> Result<Vec<Course>> {
         .map(|x| html_group_to_course(x))
         .collect();
 
-    Ok(courses)
+    Ok((term.unwrap().to_string(), courses))
 }
 
 pub async fn test_full_update() {
-    let all_courses = get_all_courses().await.unwrap();
+    let course_tuple = get_all_courses().await.unwrap();
+    let all_courses = course_tuple.1;
+    let term = course_tuple.0;
+    
     let locations = get_locations(all_courses.clone()).await;
 
     let mut writer = OpenOptions::new()

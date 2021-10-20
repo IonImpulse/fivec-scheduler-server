@@ -6,6 +6,7 @@ use ::serde::{Deserialize, Serialize};
 struct ReturnCourses {
     timestamp: u64,
     courses: Vec<Course>,
+    term: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,10 +23,11 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
 
     let courses = lock.course_cache.clone();
     let last_change = lock.last_change.clone();
+    let term = lock.term.clone();
 
     drop(lock);
 
-    HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses })
+    HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses, term})
 }
 
 /// Since the course cache updates only occasionally, this endpoint is used to
@@ -40,10 +42,11 @@ pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
         info!("Serving course update!");
         let courses = lock.course_cache.clone();
         let last_change = lock.last_change.clone();
+        let term = lock.term.clone();
 
         drop(lock);
 
-        HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses })
+        HttpResponse::Ok().json(ReturnCourses{ timestamp:last_change, courses, term})
     } else {
         info!("No course update needed!");
         HttpResponse::Ok().json("No update needed")

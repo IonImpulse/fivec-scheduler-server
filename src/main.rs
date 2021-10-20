@@ -31,6 +31,7 @@ pub struct MemDatabase {
     pub last_change: u64,
     pub code_cache: BiHashMap<String, SharedCourseList>,
     pub locations_cache: HashMap<String, (String, String)>,
+    pub term: String,
 }
 
 impl MemDatabase {
@@ -40,6 +41,7 @@ impl MemDatabase {
             last_change: get_unix_timestamp(),
             code_cache: BiHashMap::new(),
             locations_cache: HashMap::new(),
+            term: "".to_string(),
         }
     }
 }
@@ -82,7 +84,10 @@ async fn update_loop() -> std::io::Result<()> {
             number_of_courses = 0;
             error!("Error getting courses: {}", course_update.unwrap_err());
         } else {
-            let mut final_course_update: Vec<Course> = course_update.unwrap();
+            let course_tuple = course_update.unwrap();
+
+            let mut final_course_update = course_tuple.1;
+            let term_update = course_tuple.0;
 
             if final_course_update.is_empty() {
                 number_of_repeated_errors += 1;
@@ -131,6 +136,7 @@ async fn update_loop() -> std::io::Result<()> {
     
                 lock.course_cache = final_course_update;
                 lock.last_change = get_unix_timestamp();
+                lock.term = term_update;
     
                 drop(lock);
                 
@@ -148,7 +154,8 @@ async fn update_loop() -> std::io::Result<()> {
                 info!("Saved cache to file!");
             }   
         }
-        info!("Finished schedule update with {} courses!", number_of_courses);
+
+        info!("Finished schedule update with {} courses for term {}!", number_of_courses, term);
 
         if number_of_repeated_errors > 5 {
             warn!("Errors have reached dangerous levels!! Currently at {} repeated errors...", number_of_repeated_errors);
