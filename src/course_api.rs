@@ -446,7 +446,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
             to_return = x.to_string();
         }
         
-        to_return
+        to_return.trim().to_string()
     }).collect();
 
     // Get notes
