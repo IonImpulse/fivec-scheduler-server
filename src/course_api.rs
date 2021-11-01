@@ -516,6 +516,7 @@ pub async fn test_full_update() {
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
     
+    /*
     let locations = get_locations(all_courses.clone()).await;
 
     let mut writer = OpenOptions::new()
@@ -526,7 +527,7 @@ pub async fn test_full_update() {
     let serialized_output = serde_json::to_string(&locations).unwrap();
 
     writer.write(serialized_output.as_bytes());
-
+    */
     let all_descriptions = scrape_all_descriptions().await.unwrap();
 
     let all_courses_with_descriptions = merge_description_into_courses(all_courses, all_descriptions);

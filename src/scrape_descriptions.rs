@@ -37,41 +37,38 @@ impl IdentifierDescriptionPair {
     }
 }
 
-const SPLIT_AT: &str = "<td colspan=\"2\">&#160;</td>";
 
 // Serves only HMC classes
 pub fn hmc_url(page_num: u64) -> String {
-    format!("http://catalog.hmc.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=18&expand=1&navoid=892&print=1#acalog_template_course_filter", page_num)
+    format!("https://catalog.hmc.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=18&expand=1&navoid=892&print=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn cmc_url(page_num: u64) -> String {
-    format!("http://catalog.claremontmckenna.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=29&expand=1&navoid=4499&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
+    format!("https://catalog.claremontmckenna.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=29&expand=1&navoid=4499&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn pomona_url(page_num: u64) -> String {
-    format!("http://catalog.pomona.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=40&expand=1&navoid=8092&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
+    format!("https://catalog.pomona.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=40&expand=1&navoid=8092&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn scripps_url(page_num: u64) -> String {
-    format!("http://catalog.scrippscollege.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=25&expand=1&navoid=3143&print=1#acalog_template_course_filter", page_num)
+    format!("https://catalog.scrippscollege.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=25&expand=1&navoid=3143&print=1#acalog_template_course_filter", page_num)
 }
 
 // Serves ALL classes, but redirects to other colleges for descriptions
 pub fn pitzer_url(page_num: u64) -> String {
-    format!("http://catalog.pitzer.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=17&expand=1&navoid=1376&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
+    format!("https://catalog.pitzer.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=17&expand=1&navoid=1376&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
 pub fn extract_identifier_description_pair(
     html: String,
     style: u8,
 ) -> Result<Vec<IdentifierDescriptionPair>> {
-    let bottom_half = html.split(SPLIT_AT).nth(1).unwrap();
-    let usable_html = bottom_half.split(SPLIT_AT).nth(0).unwrap();
 
-    let html_vec = usable_html
+    let html_vec = html
         .split("\n")
         .filter(|x| x.contains("</a></h3><h3>"));
 
