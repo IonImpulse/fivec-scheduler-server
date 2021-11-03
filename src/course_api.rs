@@ -318,14 +318,27 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     // Get dept
     let first_number = group[0].chars().position(|c| c.is_numeric()).unwrap();
     let (code, second_half) = group[0].split_at(first_number);
+
     let code = code.trim().to_string();
 
-    let mut second_half = second_half.split_whitespace();
+    let mut second_half: Vec<&str> = second_half.split_whitespace().collect();
 
-    // Get the rest of the course info
-    let mut id = second_half.nth(0).unwrap().to_string();
-    let mut dept = second_half.nth(0).unwrap().to_string();
-    let mut section = second_half.nth(1).unwrap_or("typo").to_string();
+    let mut id: String;
+    let mut dept: String;
+    let mut section: String;
+    // Did they forget to put a space?
+    if second_half.len() == 3 {
+        id = second_half[0].to_string();
+        id = id[..id.len() - 2].to_string();
+        dept = second_half[0][id.len()..].to_string();
+        section = second_half[2].to_string();
+    } else {
+        // Get the rest of the course info
+        id = second_half.get(0).unwrap().to_string();
+        dept = second_half.get(1).unwrap().to_string();
+        section = second_half.get(3).unwrap_or(&"typo").to_string();
+    }
+
 
     if section == "typo" {
         section = dept;
@@ -513,6 +526,7 @@ pub async fn get_all_courses() -> Result<(String, Vec<Course>)> {
 
 pub async fn test_full_update() {
     let course_tuple = get_all_courses().await.unwrap();
+    println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
     
