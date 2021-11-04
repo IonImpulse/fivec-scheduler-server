@@ -213,6 +213,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(get_unique_code)
             .service(get_course_list_by_code)
             .service(get_locations_database)
+            .service(get_status)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()

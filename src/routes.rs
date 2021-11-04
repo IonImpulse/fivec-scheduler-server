@@ -100,7 +100,7 @@ pub async fn get_course_list_by_code(path: web::Path<String>) -> HttpResponse {
 }
 
 #[get("/getLocations")]
-pub async fn get_locations_database(path: web::Path<()>) -> HttpResponse {
+pub async fn get_locations_database(_path: web::Path<()>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
     let locations = lock.locations_cache.clone();
@@ -108,4 +108,9 @@ pub async fn get_locations_database(path: web::Path<()>) -> HttpResponse {
     drop(lock);
 
     HttpResponse::Ok().json(locations)
+}
+
+#[get("/status")]
+pub async fn get_status(_path: web::Path<()>) -> HttpResponse {
+    HttpResponse::Ok().json("Alive")
 }
