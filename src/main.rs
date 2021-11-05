@@ -158,12 +158,16 @@ async fn update_loop() -> std::io::Result<()> {
 
         info!("Finished schedule update with {} courses for term {}!", number_of_courses, term_update);
 
-        if number_of_repeated_errors > 5 {
-            warn!("Errors have reached dangerous levels!! Currently at {} repeated errors...", number_of_repeated_errors);
+        // Jitter to avoid rate limiting (possibly)
+        let mut jitter = thread_rng().gen_range(0..100);
+
+        if number_of_repeated_errors > 1 {
+            warn!("Currently at {} repeated errors...\nAdding time to update interval", number_of_repeated_errors);
+            
+            jitter += 600 + (number_of_repeated_errors * 120);
         }
 
-        // Jitter to avoid rate limiting (possibly)
-        let jitter = thread_rng().gen_range(0..100);
+        
         thread::sleep(Duration::from_secs(API_UPDATE_INTERVAL + jitter));
     }
 }
