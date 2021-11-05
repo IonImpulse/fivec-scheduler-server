@@ -61,7 +61,7 @@ const ADDRESS: &str = "0.0.0.0:8080";
 
 
 // Seconds per API update
-const API_UPDATE_INTERVAL: u64 = 600;
+const API_UPDATE_INTERVAL: u64 = 1200;
 const DESCRIPTION_INTERVAL_MULTIPLIER: u64 = 100;
 
 pub fn get_unix_timestamp() -> u64 {
