@@ -184,6 +184,7 @@ pub struct Course {
     seats_taken: i64,
     seats_remaining: i64,
     credits: u64, // Credits * 100, so 3.50 credits is 350, allowing for a decimal
+    credits_hmc: u64,
     status: CourseStatus,
     timing: Vec<CourseTiming>,
     instructors: Vec<String>,
@@ -387,12 +388,14 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }
 
     // Get credits
-    let credits: u64 = (group[3].trim().parse::<f64>().unwrap_or(0.) * 100.).floor() as u64;
+    let mut credits: u64 = (group[3].trim().parse::<f64>().unwrap_or(0.) * 100.).floor() as u64;
 
     // Get timing(s)
     let mut timing = Vec::new();
 
     let timing_list = group[4].split("<BR>").collect::<Vec<&str>>();
+
+    let mut at_hmc = false;
 
     for t in timing_list {
         let mut split = t.split_whitespace();
@@ -419,6 +422,10 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
 
         // Convert two char school code to school pub enum
         let school = School::new_from_string(&location_string.nth(0).unwrap().trim()[0..2]);
+
+        if school == School::HarveyMudd {
+            at_hmc = true;
+        }
 
         let building = location_string
             .nth(0)
@@ -468,6 +475,16 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     // Create identifier 
     let identifier = Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
 
+    let credits_hmc: u64;
+
+    if at_hmc {
+        credits_hmc = credits;
+        credits = credits / 3;
+    } else {
+        credits_hmc = credits * 3;
+    }
+
+
     Course {
         identifier,
         id,
@@ -482,6 +499,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         notes,
         status,
         credits,
+        credits_hmc,
         timing,
         description: "".to_string(),
     }
