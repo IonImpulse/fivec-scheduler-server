@@ -1,7 +1,27 @@
 {
+    "ClaremontGraduate-To Be Announced": [
+        "",
+        ""
+    ],
+    "Scripps-Steele Hall": [
+        "34.104821",
+        "-117.7124341502062"
+    ],
     "Pomona-Seaver South Laboratory": [
         "34.099909749999995",
         "-117.71568112672887"
+    ],
+    "NA-To Be Announced": [
+        "",
+        ""
+    ],
+    "Scripps-Tiernan Field House": [
+        "34.10410515",
+        "-117.70813862553426"
+    ],
+    "Pomona-Online": [
+        "53.8210776",
+        "-3.0349436"
     ],
     "Pomona-To Be Assigned": [
         "",
@@ -79,10 +99,6 @@
         "34.105818549999995",
         "-117.71180027855013"
     ],
-    "Pomona-Online": [
-        "",
-        ""
-    ],
     "ClaremontGraduate-Stauffer": [
         "34.1027667",
         "-117.7134042"
@@ -102,10 +118,6 @@
     "ClaremontMckenna-CMC PE Facilities": [
         "",
         ""
-    ],
-    "Scripps-Steele Hall": [
-        "34.104821",
-        "-117.7124341502062"
     ],
     "Pomona-Brackett": [
         "34.0977025",
