@@ -589,6 +589,7 @@ dependencies = [
  "regex",
  "reqwest",
  "ron",
+ "rust-fuzzy-search",
  "serde",
  "serde_json",
  "tokio",
@@ -1419,6 +1420,11 @@ dependencies = [
  "bitflags",
  "serde",
 ]
+
+[[package]]
+name = "rust-fuzzy-search"
+version = "0.1.1"
+source = "git+https://gitlab.com/EnricoCh/rust-fuzzy-search#aa760d75df956f0c12a429be92e4350329e25246"
 
 [[package]]
 name = "rustc_version"

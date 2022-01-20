@@ -273,6 +273,16 @@ impl Course {
     pub fn get_description(&self) -> String {
         self.description.clone()
     }
+
+    pub fn get_school(&self) -> Option<School> {
+        let timing = self.timing.get(0);
+        
+        if let Some(timing) = timing {
+            return Some(timing.location.school.clone())
+        } else {
+            return None
+        }
+    }
 }
 
 pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
@@ -560,7 +570,14 @@ pub async fn test_full_update() {
 
     writer.write(serialized_output.as_bytes());
     */
-    let all_descriptions = scrape_all_descriptions().await.unwrap();
+    
+    //let all_descriptions = scrape_all_descriptions().await.unwrap();
+    
+    let all_descriptions = load_descriptions_database().unwrap();
+
+    save_descriptions_database(all_descriptions.clone()).unwrap();
+
+    println!("Scraped {} descriptions", all_descriptions.len());
 
     let all_courses_with_descriptions = merge_description_into_courses(all_courses, all_descriptions);
 

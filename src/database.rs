@@ -1,4 +1,5 @@
 use crate::course_api::*;
+use crate::scrape_descriptions::*;
 use bimap::*;
 use std::fs::OpenOptions;
 use std::io::{Error, Read, Write};
@@ -10,6 +11,7 @@ use rand::SeedableRng;
 const COURSE_DATABASE_NAME: &str = "./course_cache.json";
 const CODE_DATA_NAME: &str = "./code_data.json";
 const LOCATION_NAME: &str = "./locations.json";
+const DESCRIPTION_NAME: &str = "./descriptions.json";
 
 const POSSIBLE_CODE_CHARS: &'static [char] = &[
     '2', '3', '4', '6', '7', '9', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P', 'A', 'D', 'F', 'G', 'H',
@@ -88,6 +90,33 @@ pub fn load_locations_database() -> Result<HashMap<String, (String, String)>, Er
     }
 }
 
+pub fn load_descriptions_database() -> Result<Vec<CourseDescription>, Error> {
+    let file = OpenOptions::new().read(true).open(DESCRIPTION_NAME);
+
+    if file.is_err() {
+        return Ok(Vec::new());
+    } else {
+        let mut file = file.unwrap();
+
+        let mut data = String::new();
+        file.read_to_string(&mut data)?;
+        let descriptions: Vec<CourseDescription> = from_slice_lenient(&data.as_bytes()).unwrap();
+        Ok(descriptions)
+    }
+}
+
+pub fn save_descriptions_database(descriptions: Vec<CourseDescription>) -> Result<(), Error> {
+    let mut writer = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(DESCRIPTION_NAME)?;
+
+    let serialized_output = serde_json::to_string(&descriptions).unwrap();
+
+    writer.write(serialized_output.as_bytes())?;
+
+    Ok(())
+}
 
 pub fn generate_unique_code(
     shared_course_list: SharedCourseList,

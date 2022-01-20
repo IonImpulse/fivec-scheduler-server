@@ -31,6 +31,7 @@ pub struct MemDatabase {
     pub last_change: u64,
     pub code_cache: BiHashMap<String, SharedCourseList>,
     pub locations_cache: HashMap<String, (String, String)>,
+    pub descriptions_cache: Vec<CourseDescription>,
     pub term: String,
 }
 
@@ -41,6 +42,7 @@ impl MemDatabase {
             last_change: get_unix_timestamp(),
             code_cache: BiHashMap::new(),
             locations_cache: HashMap::new(),
+            descriptions_cache: Vec::new(),
             term: "".to_string(),
         }
     }
@@ -106,17 +108,18 @@ async fn update_loop() -> std::io::Result<()> {
                     
                     let course_desc_update = scrape_all_descriptions().await;
                     
-                    if course_desc_update.is_err() {
-                        number_of_repeated_errors += 1;
-                        error!("Error getting descriptions: {}", course_desc_update.unwrap_err());
-                    } else {
+                    if let Ok(course_desc_update) = course_desc_update {
                         number_of_repeated_errors = 0;
 
-                        final_course_update = merge_description_into_courses(final_course_update, course_desc_update.unwrap());
+                        final_course_update = merge_description_into_courses(final_course_update, course_desc_update.clone());
 
+                        save_descriptions_database(course_desc_update).unwrap();
                         save_course_database(final_course_update.clone()).unwrap();
 
                         info!("Successfully updated descriptions!");
+                    } else {
+                        number_of_repeated_errors += 1;
+                        error!("Error getting descriptions: {:?}", course_desc_update.unwrap_err());
                     }
                 
                 } else {
@@ -178,12 +181,13 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    //test_full_update().await;
+    test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();
     lock.code_cache = load_code_database().unwrap();
     lock.locations_cache = load_locations_database().unwrap();
+    lock.descriptions_cache = load_descriptions_database().unwrap();
     drop(lock);
 
     info!("Database(s) loaded!");
