@@ -1,5 +1,6 @@
 use crate::*;
 use actix_web::*;
+use openssl::stack::Stack;
 use ::serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -13,6 +14,13 @@ struct ReturnCourses {
 struct ReturnCourseList {
     code: String,
     courses: SharedCourseList,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Status {
+    alive: bool,
+    last_connection: String,
+    ten_minute_total: u64,
 }
 
 /// A simple cache for courses
@@ -36,7 +44,9 @@ pub async fn update_all_courses(path: web::Path<()>) -> HttpResponse {
 pub async fn update_if_stale(path: web::Path<u64>) -> HttpResponse {
     let unix_timestamp_seconds = path.into_inner();
 
-    let lock = MEMORY_DATABASE.lock().await;
+    let mut lock = MEMORY_DATABASE.lock().await;
+    
+    lock.add_ten_log();
 
     if &lock.last_change != &unix_timestamp_seconds {
         info!("Serving course update!");
@@ -112,5 +122,11 @@ pub async fn get_locations_database(_path: web::Path<()>) -> HttpResponse {
 
 #[get("/status")]
 pub async fn get_status(_path: web::Path<()>) -> HttpResponse {
-    HttpResponse::Ok().json("Alive")
+    let lock = MEMORY_DATABASE.lock().await;
+
+    HttpResponse::Ok().json(Status {
+        alive: true,
+        last_connection: format!("{} seconds ago", Instant::now().duration_since(*lock.ten_minute_log.last().unwrap()).as_secs()),
+        ten_minute_total: lock.ten_minute_log.len() as u64,
+    })
 }

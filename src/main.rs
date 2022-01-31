@@ -1,8 +1,9 @@
 use actix_web::*;
 use actix_cors::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+use regex::internal::Inst;
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
 use std::process::exit;
 use std::collections::HashMap;
 use log::*;
@@ -33,6 +34,7 @@ pub struct MemDatabase {
     pub locations_cache: HashMap<String, (String, String)>,
     pub descriptions_cache: Vec<CourseDescription>,
     pub term: String,
+    pub ten_minute_log: Vec<Instant>,
 }
 
 impl MemDatabase {
@@ -44,6 +46,15 @@ impl MemDatabase {
             locations_cache: HashMap::new(),
             descriptions_cache: Vec::new(),
             term: "".to_string(),
+            ten_minute_log: Vec::new(),
+        }
+    }
+
+    fn add_ten_log(&mut self) {
+        let now = Instant::now();
+        self.ten_minute_log.push(now);
+        while self.ten_minute_log.len() > 0 && self.ten_minute_log[0].elapsed() > Duration::from_secs(600) {
+            self.ten_minute_log.remove(0);
         }
     }
 }
