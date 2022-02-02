@@ -19,7 +19,7 @@ struct ReturnCourseList {
 #[derive(Debug, Serialize, Deserialize)]
 struct Status {
     alive: bool,
-    last_connection: String,
+    seconds_since_last_connection: u64,
     ten_minute_total: u64,
 }
 
@@ -126,7 +126,7 @@ pub async fn get_status(_path: web::Path<()>) -> HttpResponse {
 
     HttpResponse::Ok().json(Status {
         alive: true,
-        last_connection: format!("{} seconds ago", Instant::now().duration_since(*lock.ten_minute_log.last().unwrap()).as_secs()),
+        seconds_since_last_connection: Instant::now().duration_since(*lock.ten_minute_log.last().unwrap()).as_secs(),
         ten_minute_total: lock.ten_minute_log.len() as u64,
     })
 }
