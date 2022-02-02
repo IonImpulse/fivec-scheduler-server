@@ -8,6 +8,7 @@ use crate::scrape_descriptions::*;
 use crate::locations::*;
 use std::fs::OpenOptions;
 use std::io::{Error, Read, Write};
+use std::collections::HashMap;
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
 const TIME_FMT: &str = "%I:%M%p";
@@ -552,24 +553,39 @@ pub async fn get_all_courses() -> Result<(String, Vec<Course>)> {
     Ok((term.unwrap().to_string(), courses))
 }
 
+pub fn merge_locations(current_locations: HashMap<String, (String, String)>, new_locations: HashMap<String, (String, String)>) -> HashMap<String, (String,String)> {
+    let mut locations = current_locations;
+
+    for (key, value) in new_locations {
+        if !locations.contains_key(&key) {
+            locations.insert(key, value);
+        }
+    }
+
+    locations
+
+}
+
 pub async fn test_full_update() {
     let course_tuple = get_all_courses().await.unwrap();
     println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
     
-    /*
-    let locations = get_locations(all_courses.clone()).await;
+    let current_locations = load_locations_database().unwrap();
+
+    let new_locations = get_locations(all_courses.clone()).await;
+
+    let new_locations = merge_locations(current_locations, new_locations);
 
     let mut writer = OpenOptions::new()
         .create(true)
         .write(true)
         .open("locations.json").unwrap();
 
-    let serialized_output = serde_json::to_string(&locations).unwrap();
+    let serialized_output = serde_json::to_string(&new_locations).unwrap();
 
     writer.write(serialized_output.as_bytes());
-    */
     
     //let all_descriptions = scrape_all_descriptions().await.unwrap();
     
