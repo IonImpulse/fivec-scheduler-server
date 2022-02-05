@@ -35,7 +35,6 @@ pub struct MemDatabase {
     pub descriptions_cache: Vec<CourseDescription>,
     pub term: String,
     pub ten_minute_log: Vec<Instant>,
-    pub year_catalog: Vec<CourseDescription>,
 }
 
 impl MemDatabase {
@@ -48,7 +47,6 @@ impl MemDatabase {
             descriptions_cache: Vec::new(),
             term: "".to_string(),
             ten_minute_log: Vec::new(),
-            year_catalog: Vec::new(),
         }
     }
 
@@ -129,8 +127,12 @@ async fn update_loop() -> std::io::Result<()> {
                         final_course_update = merged.0;
                         let descriptions = merged.1;
 
-                        save_descriptions_database(descriptions).unwrap();
+                        save_descriptions_database(descriptions.clone()).unwrap();
                         save_course_database(final_course_update.clone()).unwrap();
+
+                        let mut lock = MEMORY_DATABASE.lock().await;
+                        lock.descriptions_cache = descriptions;
+                        drop(lock);
 
                         info!("Successfully updated descriptions!");
                     } else {

@@ -135,7 +135,7 @@ pub async fn get_status(_path: web::Path<()>) -> HttpResponse {
 pub async fn get_full_year_catalog(_path: web::Path<()>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
-    let year_catalog = lock.year_catalog.clone();
+    let year_catalog = lock.descriptions_cache.clone();
 
     drop(lock);
 
