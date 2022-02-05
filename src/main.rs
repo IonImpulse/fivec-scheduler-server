@@ -240,6 +240,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(get_course_list_by_code)
             .service(get_locations_database)
             .service(get_status)
+            .service(get_full_year_catalog)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()
