@@ -130,3 +130,14 @@ pub async fn get_status(_path: web::Path<()>) -> HttpResponse {
         ten_minute_total: lock.ten_minute_log.len() as u64,
     })
 }
+
+#[get("/fullYearCatalog")]
+pub async fn get_full_year_catalog(_path: web::Path<()>) -> HttpResponse {
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let year_catalog = lock.year_catalog.clone();
+
+    drop(lock);
+
+    HttpResponse::Ok().json(year_catalog)
+}

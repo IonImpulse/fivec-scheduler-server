@@ -32,6 +32,7 @@ pub struct CourseDescription {
     pub identifier: String,
     pub description: String,
     pub source: School,
+    pub instructors: Vec<String>,
 }
 
 impl CourseDescription {
@@ -46,7 +47,12 @@ impl CourseDescription {
             identifier,
             description,
             source,
+            instructors: Vec::new(),
         }
+    }
+
+    pub fn set_instructors(&mut self, instructors: Vec<String>) {
+        self.instructors = instructors;
     }
 }
 
@@ -301,11 +307,14 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     ]))
 }
 
-pub fn merge_description_into_courses(
+pub fn merge_description_and_courses(
     courses: Vec<Course>,
     descriptions: Vec<CourseDescription>,
-) -> Vec<Course> {
-    let mut return_vec: Vec<Course> = Vec::new();
+) -> (Vec<Course>, Vec<CourseDescription>) {
+
+    let mut courses_vec: Vec<Course> = Vec::new();
+
+    let mut descs_vec: Vec<CourseDescription> = Vec::new();
 
     for course in courses {
         let mut new_course = course.clone();
@@ -314,13 +323,20 @@ pub fn merge_description_into_courses(
         let description = find_description(course, &descriptions);
 
         if description.is_some() {
-            new_course.set_description(description.unwrap().description);
+            let mut desc = description.unwrap();
+
+            desc.set_instructors(new_course.get_instructors());
+            
+            new_course.set_description(desc.description.clone());
+
+            descs_vec.push(desc.clone());
+
         }
 
-        return_vec.push(new_course);
+        courses_vec.push(new_course);
     }
 
-    let total_added_descs = return_vec
+    let total_added_descs = courses_vec
         .clone()
         .into_iter()
         .filter(|x| x.get_description().len() > 1)
@@ -328,10 +344,10 @@ pub fn merge_description_into_courses(
     println!(
         "{}/{} courses have descriptions!",
         total_added_descs,
-        return_vec.len()
+        courses_vec.len()
     );
 
-    return_vec
+    (courses_vec, descs_vec)
 }
 
 pub fn find_description(

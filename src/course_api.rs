@@ -284,6 +284,10 @@ impl Course {
             return None
         }
     }
+
+    pub fn get_instructors(&self) -> Vec<String> {
+        self.instructors.clone()
+    }
 }
 
 pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
@@ -595,9 +599,9 @@ pub async fn test_full_update() {
 
     println!("Scraped {} descriptions", all_descriptions.len());
 
-    let all_courses_with_descriptions = merge_description_into_courses(all_courses, all_descriptions);
+    let all_courses_with_descriptions = merge_description_and_courses(all_courses, all_descriptions);
 
-    save_course_database(all_courses_with_descriptions.clone()).unwrap();
+    save_course_database(all_courses_with_descriptions.0.clone()).unwrap();
 
-    assert_eq!(all_courses_with_descriptions, load_course_database().unwrap())
+    assert_eq!(all_courses_with_descriptions.0, load_course_database().unwrap())
 }

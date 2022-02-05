@@ -35,6 +35,7 @@ pub struct MemDatabase {
     pub descriptions_cache: Vec<CourseDescription>,
     pub term: String,
     pub ten_minute_log: Vec<Instant>,
+    pub year_catalog: Vec<CourseDescription>,
 }
 
 impl MemDatabase {
@@ -47,6 +48,7 @@ impl MemDatabase {
             descriptions_cache: Vec::new(),
             term: "".to_string(),
             ten_minute_log: Vec::new(),
+            year_catalog: Vec::new(),
         }
     }
 
@@ -122,9 +124,12 @@ async fn update_loop() -> std::io::Result<()> {
                     if let Ok(course_desc_update) = course_desc_update {
                         number_of_repeated_errors = 0;
 
-                        final_course_update = merge_description_into_courses(final_course_update, course_desc_update.clone());
+                        let merged = merge_description_and_courses(final_course_update, course_desc_update.clone());
 
-                        save_descriptions_database(course_desc_update).unwrap();
+                        final_course_update = merged.0;
+                        let descriptions = merged.1;
+
+                        save_descriptions_database(descriptions).unwrap();
                         save_course_database(final_course_update.clone()).unwrap();
 
                         info!("Successfully updated descriptions!");
@@ -192,7 +197,7 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    // test_full_update().await;
+    //  test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();
