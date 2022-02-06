@@ -492,6 +492,9 @@ pub fn merge_description_and_courses(
             let index = descs_vec.iter().position(|r| &r.title == &desc.title && &r.identifier == &desc.identifier).unwrap();
 
             desc.set_instructors(new_course.get_instructors());
+            if desc.credits == 0 {
+                desc.credits = new_course.get_credits().clone();
+            }
 
             new_course.set_description(desc.description.clone());
             new_course.set_prerequisites(desc.prerequisites.clone());
