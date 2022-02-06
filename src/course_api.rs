@@ -191,6 +191,9 @@ pub struct Course {
     instructors: Vec<String>,
     notes: String,
     description: String,
+    prerequisites: String,
+    corequisites: String,
+    offered: String,
 }
 
 impl Course {
@@ -287,6 +290,22 @@ impl Course {
 
     pub fn get_instructors(&self) -> Vec<String> {
         self.instructors.clone()
+    }
+
+    pub fn set_prerequisites(&mut self, prerequisites: String) {
+        self.prerequisites = prerequisites
+    }
+
+    pub fn get_prerequisites(&self) -> String {
+        self.prerequisites.clone()
+    }
+
+    pub fn set_corequisites(&mut self, corequisites: String) {
+        self.corequisites = corequisites
+    }
+
+    pub fn get_corequisites(&self) -> String {
+        self.corequisites.clone()
     }
 }
 
@@ -517,6 +536,9 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         credits_hmc,
         timing,
         description: "".to_string(),
+        prerequisites: "".to_string(),
+        corequisites: "".to_string(),
+        offered: "".to_string(),
     }
 }
 
@@ -576,6 +598,7 @@ pub async fn test_full_update() {
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
     
+    /*
     let current_locations = load_locations_database().unwrap();
 
     let new_locations = get_locations(all_courses.clone()).await;
@@ -591,17 +614,21 @@ pub async fn test_full_update() {
 
     writer.write(serialized_output.as_bytes());
     
+     */
+
     //let all_descriptions = scrape_all_descriptions().await.unwrap();
     
     let all_descriptions = load_descriptions_database().unwrap();
 
-    save_descriptions_database(all_descriptions.clone()).unwrap();
-
     println!("Scraped {} descriptions", all_descriptions.len());
 
-    let all_courses_with_descriptions = merge_description_and_courses(all_courses, all_descriptions);
+    let final_courses = merge_description_and_courses(all_courses, all_descriptions);
 
-    save_course_database(all_courses_with_descriptions.0.clone()).unwrap();
+    let courses = final_courses.0;
+    let descriptions = final_courses.1;
 
-    assert_eq!(all_courses_with_descriptions.0, load_course_database().unwrap())
+    save_course_database(courses.clone()).unwrap();
+    save_descriptions_database(descriptions.clone()).unwrap();
+
+    assert_eq!(courses, load_course_database().unwrap())
 }
