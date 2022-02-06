@@ -113,7 +113,7 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
 
     for (index, line) in start_indexes {
         // Skip lines that don't contain a course description
-        if line.contains("See") && line.contains("Catalog") && line.contains("description") {
+        if line.to_lowercase().contains("see") && line.to_lowercase().contains("catalog") && line.to_lowercase().contains("college") {
             continue;
         }
 
@@ -244,8 +244,6 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                 }
             }
         } else if &style == &ClaremontMckenna {
-            println!("{:?}", split_line);
-
             description = split_line[1]
                 .split("<br><br>")
                 .nth(0)

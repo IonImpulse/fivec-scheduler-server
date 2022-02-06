@@ -616,9 +616,9 @@ pub async fn test_full_update() {
     
      */
 
-    //let all_descriptions = scrape_all_descriptions().await.unwrap();
+    let all_descriptions = scrape_all_descriptions().await.unwrap();
     
-    let all_descriptions = load_descriptions_database().unwrap();
+    //let all_descriptions = load_descriptions_database().unwrap();
 
     println!("Scraped {} descriptions", all_descriptions.len());
 
