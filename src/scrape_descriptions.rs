@@ -589,6 +589,14 @@ pub fn merge_description_and_courses(
             let r = process_req(notes.clone(), "Coreq".to_string());
             course.set_notes(r.0);
             course.set_corequisites(r.1);
+        } else if notes.contains("Co-requisite") {
+            let r = process_req(notes.clone(), "Co-requisite".to_string());
+            course.set_notes(r.0);
+            course.set_corequisites(r.1);
+        } else if notes.contains("Co-req") {
+            let r = process_req(notes.clone(), "Co-req".to_string());
+            course.set_notes(r.0);
+            course.set_corequisites(r.1);
         }
     }
 
