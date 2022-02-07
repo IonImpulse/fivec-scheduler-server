@@ -106,7 +106,7 @@ pub fn pitzer_url(page_num: u64) -> String {
 pub fn between(str: &str, start: &str, end: &str) -> String {
     let start_pos = &str[str.find(start).unwrap() + start.len()..];
 
-    start_pos[..start_pos.find(end).unwrap_or(start_pos.len() - 1)]
+    start_pos[..start_pos.find(end).unwrap_or(start_pos.len())]
         .trim()
         .to_string()
 }
@@ -717,6 +717,18 @@ pub fn merge_courses(previous: Vec<Course>, new: Vec<Course>) -> Vec<Course> {
             if final_course.get_title() == previous_course.get_title() {
                 if final_course.get_description().len() < previous_course.get_description().len() {
                     final_course.set_description(previous_course.get_description());
+                }
+
+                if final_course.get_notes() != previous_course.get_notes() {
+                    final_course.set_notes(previous_course.get_notes().to_string());
+                }
+
+                if final_course.get_prerequisites().len() < previous_course.get_prerequisites().len() {
+                    final_course.set_prerequisites(previous_course.get_prerequisites());
+                }
+
+                if final_course.get_corequisites().len() < previous_course.get_corequisites().len() {
+                    final_course.set_corequisites(previous_course.get_corequisites());
                 }
             }
         }

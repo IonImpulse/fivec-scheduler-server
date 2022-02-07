@@ -624,11 +624,11 @@ pub async fn test_full_update() {
     
      */
 
-    let all_descriptions = scrape_all_descriptions().await.unwrap();
+    //let all_descriptions = scrape_all_descriptions().await.unwrap();
     
-    //let mut all_descriptions = load_descriptions_database().unwrap();
+    let mut all_descriptions = load_descriptions_database().unwrap();
 
-    //let all_descriptions = find_reqs(&mut all_descriptions);
+    let all_descriptions = find_reqs(&mut all_descriptions);
 
     println!("Scraped {} descriptions", all_descriptions.len());
 
