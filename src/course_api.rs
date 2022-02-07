@@ -250,7 +250,7 @@ impl Course {
     }
 
     pub fn set_notes(&mut self, notes: String) {
-        self.notes = notes;
+        self.notes = notes.replace("..", ".");
     }
 
     pub fn get_timing_minimal(&self) -> String {
