@@ -512,7 +512,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }).collect();
 
     // Get notes
-    let notes = group[6].trim().to_string().replace("<BR>", ". ");
+    let notes = group[6].trim().to_string().replace("<BR>", ". ").replace("..", ".");
 
     // Create identifier 
     let identifier = Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
