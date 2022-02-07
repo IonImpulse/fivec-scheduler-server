@@ -245,6 +245,14 @@ impl Course {
         self.timing.clone()
     }
 
+    pub fn get_notes(&self) -> &String {
+        &self.notes
+    }
+
+    pub fn set_notes(&mut self, notes: String) {
+        self.notes = notes;
+    }
+
     pub fn get_timing_minimal(&self) -> String {
         let mut string_timings = String::new();
 
@@ -504,7 +512,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }).collect();
 
     // Get notes
-    let notes = group[6].trim().to_string().replace("<BR>", "\n");
+    let notes = group[6].trim().to_string().replace("<BR>", ". ");
 
     // Create identifier 
     let identifier = Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
@@ -618,7 +626,9 @@ pub async fn test_full_update() {
 
     let all_descriptions = scrape_all_descriptions().await.unwrap();
     
-    //let all_descriptions = load_descriptions_database().unwrap();
+    //let mut all_descriptions = load_descriptions_database().unwrap();
+
+    //let all_descriptions = find_reqs(&mut all_descriptions);
 
     println!("Scraped {} descriptions", all_descriptions.len());
 

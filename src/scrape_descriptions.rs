@@ -23,6 +23,15 @@ use std::error::Error;
 use std::f32::consts::PI;
 use std::ops::Index;
 
+// Remove HTML while preserving what is inside of
+// links/bolded
+lazy_static! {
+    static ref RE_HTML: Regex = Regex::new(r"<[^>]+>").unwrap();
+    static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
+    static ref RE_INVISIBLE: Regex = Regex::new(r" ").unwrap();
+}
+
+
 // Simple pair that can be used to merge into actual course data
 // "Classic Title" refers to the college's way of identifying the course:
 // "ASAM126 HM" instead of "ASAM-126-HM-{section_num}"
@@ -95,10 +104,11 @@ pub fn pitzer_url(page_num: u64) -> String {
 }
 
 pub fn between(str: &str, start: &str, end: &str) -> String {
-
     let start_pos = &str[str.find(start).unwrap() + start.len()..];
 
-    start_pos[..start_pos.find(end).unwrap()].trim().to_string()
+    start_pos[..start_pos.find(end).unwrap_or(start_pos.len() - 1)]
+        .trim()
+        .to_string()
 }
 
 pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDescription>> {
@@ -113,7 +123,10 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
 
     for (index, line) in start_indexes {
         // Skip lines that don't contain a course description
-        if line.to_lowercase().contains("see") && line.to_lowercase().contains("catalog") && line.to_lowercase().contains("college") {
+        if line.to_lowercase().contains("see")
+            && line.to_lowercase().contains("catalog")
+            && line.to_lowercase().contains("college")
+        {
             continue;
         }
 
@@ -221,13 +234,9 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                 }
 
                 if target.contains("<strong>Course Credit:</strong>") {
-                    credits = between(
-                        target,
-                        "<strong>Course Credit:</strong>",
-                        "<br>",
-                    )
-                    .parse::<f64>()
-                    .unwrap_or(0.0);
+                    credits = between(target, "<strong>Course Credit:</strong>", "<br>")
+                        .parse::<f64>()
+                        .unwrap_or(0.0);
                 }
 
                 if target.contains("<strong>Offered:</strong>") {
@@ -236,10 +245,11 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
 
                 if target.contains("<strong>Prerequisite(s):</strong>") {
                     if target.contains("</p>") {
-                        prerequisites = between(target, "<strong>Prerequisite(s):</strong>", "</p>");
+                        prerequisites =
+                            between(target, "<strong>Prerequisite(s):</strong>", "</p>");
                     } else {
-                        prerequisites = between(target, "<strong>Prerequisite(s):</strong>", "<br>");    
-
+                        prerequisites =
+                            between(target, "<strong>Prerequisite(s):</strong>", "<br>");
                     }
                 }
             }
@@ -268,11 +278,10 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                 .unwrap_or(0.0);
 
             when_offered = between(target, "<br><br>Offered: ", "<br><br>");
-
         } else if &style == &Pomona {
             if split_line[1].to_lowercase().contains("when offered")
                 && split_line[1].contains("<br><br>")
-            {   
+            {
                 let mut target = String::new();
 
                 if split_line[1].contains("<hr>") {
@@ -304,7 +313,6 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                     .map(|x| x.trim().to_string())
                     .collect::<Vec<String>>();
                 }
-                
 
                 credits = between(split_line[1], "<br><strong>Credit:</strong>", "<br><br>")
                     .parse::<f64>()
@@ -329,14 +337,6 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
         } else {
             description = String::from("");
         }
-
-        // Remove HTML while preserving what is inside of
-        // links/bolded
-        lazy_static! {
-            static ref RE_HTML: Regex = Regex::new(r"<[^>]+>").unwrap();
-            static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
-        }
-
         let description = RE_HTML.replace_all(&description, "").to_string();
         let prerequisites = RE_HTML.replace_all(&prerequisites, "").to_string();
         let corequisites = RE_HTML.replace_all(&corequisites, "").to_string();
@@ -407,7 +407,7 @@ pub async fn scrape_url(
             .text()
             .await?;
 
-        let extracted_pairs = extract_description(response, style.clone());
+        let extracted_pairs = extract_description(RE_INVISIBLE.replace_all(&response, "").into(), style.clone());
 
         if extracted_pairs.is_err() {
             error!("Error! {}", extracted_pairs.err().unwrap());
@@ -447,6 +447,52 @@ pub fn merge_descriptions(schools_vec: Vec<Vec<CourseDescription>>) -> Vec<Cours
     return_map
 }
 
+pub fn process_req(text_source: String, string: String) -> (String, String) {
+    let mut req = between(&text_source, &string, ".");
+
+    let source = text_source
+        .replace(&string, "")
+        .replace(req.as_str(), "")
+        .replace("..", ".")
+        .replace(". .", ".")
+        .trim()
+        .to_string();
+
+    req = req.replace("s:", "").replace(":", "").trim().to_string();
+
+    (source, req)
+}
+
+pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
+    for mut desc in descs.iter_mut() {
+        // Check for prerequisites in description
+        if desc.description.contains("Prerequisite") {
+            let r = process_req(desc.description.clone(), "Prerequisite".to_string());
+            desc.description = r.0;
+            desc.prerequisites = RE_SPACES.replace_all(&r.1, " ").to_string();
+        } else if desc.description.contains("Prereq") {
+            let r = process_req(desc.description.clone(), "Prereq".to_string());
+            desc.description = r.0;
+            desc.prerequisites = RE_SPACES.replace_all(&r.1, " ").to_string();
+        }
+
+        // Check for corequisites in description
+        if desc.description.contains("Corequisite") {
+            let r = process_req(desc.description.clone(), "Corequisite".to_string());
+            desc.description = r.0;
+            desc.corequisites = RE_SPACES.replace_all(&r.1, " ").to_string();
+        } else if desc.description.contains("Coreq") {
+            let r = process_req(desc.description.clone(), "Coreq".to_string());
+            desc.description = r.0;
+            desc.corequisites = RE_SPACES.replace_all(&r.1, " ").to_string();
+        }
+
+        desc.description = RE_SPACES.replace_all(&desc.description, " ").to_string();
+    }
+
+    descs.to_vec()
+}
+
 pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     info!("Scraping HMC descriptions");
     let hmc_courses = scrape_url(hmc_url, HarveyMudd).await?;
@@ -458,14 +504,16 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     let pomona_courses = scrape_url(pomona_url, Pomona).await?;
     info!("Scraping CMC descriptions");
     let cmc_courses = scrape_url(cmc_url, ClaremontMckenna).await?;
-    
-    Ok(merge_descriptions(vec![
+
+    let mut all_descs = merge_descriptions(vec![
         hmc_courses,
         cmc_courses,
         pomona_courses,
         scripps_courses,
         pitzer_courses,
-    ]))
+    ]);
+
+    Ok(find_reqs(&mut all_descs))
 }
 
 pub fn merge_description_and_courses(
@@ -486,8 +534,11 @@ pub fn merge_description_and_courses(
             let mut desc = description.unwrap();
 
             println!("{}", desc.title);
-            
-            let index = descs_vec.iter().position(|r| &r.title == &desc.title && &r.identifier == &desc.identifier).unwrap();
+
+            let index = descs_vec
+                .iter()
+                .position(|r| &r.title == &desc.title && &r.identifier == &desc.identifier)
+                .unwrap();
 
             desc.set_instructors(new_course.get_instructors());
             if desc.credits == 0 {
@@ -514,6 +565,32 @@ pub fn merge_description_and_courses(
         total_added_descs,
         courses_vec.len()
     );
+
+
+    // Get reqs from notes
+    for mut course in courses_vec.iter_mut() {
+        let notes = course.get_notes().clone();
+
+        if notes.contains("Prerequisite") {
+            let r = process_req(notes.clone(), "Prerequisite".to_string());
+            course.set_notes(r.0);
+            course.set_prerequisites(r.1);
+        } else if notes.contains("Prereq") {
+            let r = process_req(notes.clone(), "Prereq".to_string());
+            course.set_notes(r.0);
+            course.set_prerequisites(r.1);
+        }
+
+        if notes.contains("Corequisite") {
+            let r = process_req(notes.clone(), "Corequisite".to_string());
+            course.set_notes(r.0);
+            course.set_corequisites(r.1);
+        } else if notes.contains("Coreq") {
+            let r = process_req(notes.clone(), "Coreq".to_string());
+            course.set_notes(r.0);
+            course.set_corequisites(r.1);
+        }
+    }
 
     (courses_vec, descs_vec)
 }
