@@ -301,7 +301,7 @@ impl Course {
     }
 
     pub fn set_prerequisites(&mut self, prerequisites: String) {
-        self.prerequisites = prerequisites
+        self.prerequisites = Course::format_reqs(prerequisites)
     }
 
     pub fn get_prerequisites(&self) -> String {
@@ -309,11 +309,42 @@ impl Course {
     }
 
     pub fn set_corequisites(&mut self, corequisites: String) {
-        self.corequisites = corequisites
+        self.corequisites = Course::format_reqs(corequisites)
     }
 
     pub fn get_corequisites(&self) -> String {
         self.corequisites.clone()
+    }
+
+    pub fn format_reqs(rec: String) -> String {
+        let mut reqs = rec;
+
+        for (i, c) in reqs.clone().chars().enumerate() {
+            if i > 0 && i < reqs.len() - 1 {
+
+                // If a lowercase letter is followed by a capital letter, add a space
+                // EX: andE80 => and E80
+                if c.is_uppercase() && reqs.chars().nth(i - 1).unwrap().is_lowercase() {
+                    reqs = format!("{} {}", reqs[..i].to_string(), c);
+                }
+
+                // If there's no space between a comman and a letter, add a space
+                if c.is_alphanumeric() && reqs.chars().nth(i - 1).unwrap() == ',' {
+                    reqs = format!("{} {}", reqs[..i].to_string(), c);
+                }
+
+                // If there *is* space between a letter and a comma, remove the space
+                if c == ',' && reqs.chars().nth(i - 1).unwrap() == ' ' {
+                    reqs = format!("{}{}", reqs[..i].to_string(), c);
+                }
+            }
+        }
+
+        reqs = reqs.trim_start_matches(", ").to_string();
+
+        reqs = reqs.replace(" ", " ");
+
+        reqs
     }
 }
 
@@ -624,9 +655,9 @@ pub async fn test_full_update() {
     
      */
 
-    //let all_descriptions = scrape_all_descriptions().await.unwrap();
+    let mut all_descriptions = scrape_all_descriptions().await.unwrap();
     
-    let mut all_descriptions = load_descriptions_database().unwrap();
+    //let mut all_descriptions = load_descriptions_database().unwrap();
 
     let all_descriptions = find_reqs(&mut all_descriptions);
 

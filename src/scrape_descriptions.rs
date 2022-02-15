@@ -18,6 +18,7 @@ use log::{error, info, warn};
 use regex::Regex;
 use reqwest::*;
 use rust_fuzzy_search::*;
+use std::ascii::AsciiExt;
 use std::collections::HashMap;
 use std::error::Error;
 use std::f32::consts::PI;
@@ -28,7 +29,6 @@ use std::ops::Index;
 lazy_static! {
     static ref RE_HTML: Regex = Regex::new(r"<[^>]+>").unwrap();
     static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
-    static ref RE_INVISIBLE: Regex = Regex::new(r" ").unwrap();
 }
 
 
@@ -104,6 +104,9 @@ pub fn pitzer_url(page_num: u64) -> String {
 }
 
 pub fn between(str: &str, start: &str, end: &str) -> String {
+    println!("Searching for {} to {}", start, end);
+    println!("{}", str);
+
     let start_pos = &str[str.find(start).unwrap() + start.len()..];
 
     start_pos[..start_pos.find(end).unwrap_or(start_pos.len())]
@@ -112,7 +115,7 @@ pub fn between(str: &str, start: &str, end: &str) -> String {
 }
 
 pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDescription>> {
-    let mut html_vec: Vec<String> = html.split("\n").map(|x| x.to_string()).collect();
+    let mut html_vec: Vec<String> = html.split("\n").filter(|x| x.is_ascii()).map(|x| x.to_string()).collect();
 
     let start_indexes = html_vec
         .iter()
@@ -261,23 +264,25 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                 .trim()
                 .to_string();
 
-            let target;
+            let mut target = "".to_string();
+                
+            println!("{:?}", split_line);
 
             if split_line[1].contains("<br>Credit:") {
-                target = split_line[1];
+                target = split_line[1].to_string();
             } else {
-                if html_vec[index + 1].contains("<br>Credit:") {
-                    target = html_vec[index + 1].as_str();
-                } else {
-                    target = html_vec[index + 2].as_str();
+                let mut i = index;
+                while !target.contains("<br>Offered:") {
+                    target = format!("{}{}", target, html_vec[i].as_str());
+                    i += 1;
                 }
             }
 
-            credits = between(target, "<br>Credit: ", "<br>")
+            credits = between(&target, "<br>Credit: ", "<br>")
                 .parse::<f64>()
                 .unwrap_or(0.0);
 
-            when_offered = between(target, "<br><br>Offered: ", "<br><br>");
+            when_offered = between(&target, "<br><br>Offered: ", "<br><br>");
         } else if &style == &Pomona {
             if split_line[1].to_lowercase().contains("when offered")
                 && split_line[1].contains("<br><br>")
@@ -407,7 +412,7 @@ pub async fn scrape_url(
             .text()
             .await?;
 
-        let extracted_pairs = extract_description(RE_INVISIBLE.replace_all(&response, "").into(), style.clone());
+        let extracted_pairs = extract_description(response, style.clone());
 
         if extracted_pairs.is_err() {
             error!("Error! {}", extracted_pairs.err().unwrap());
@@ -494,6 +499,8 @@ pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
 }
 
 pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
+    info!("Scraping CMC descriptions");
+    let cmc_courses = scrape_url(cmc_url, ClaremontMckenna).await?;
     info!("Scraping HMC descriptions");
     let hmc_courses = scrape_url(hmc_url, HarveyMudd).await?;
     info!("Scraping Scripps descriptions");
@@ -502,9 +509,7 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     let pitzer_courses = scrape_url(pitzer_url, Pitzer).await?;
     info!("Scraping Pomona descriptions");
     let pomona_courses = scrape_url(pomona_url, Pomona).await?;
-    info!("Scraping CMC descriptions");
-    let cmc_courses = scrape_url(cmc_url, ClaremontMckenna).await?;
-
+    
     let mut all_descs = merge_descriptions(vec![
         hmc_courses,
         cmc_courses,
@@ -663,10 +668,6 @@ pub fn find_description(
         } else {
             // Otherwise, search the matching identifiers for titles
             let matching_titles = find_fuzzy_title(&course_title, &matching_identifiers);
-
-            if course_title.contains("dante") {
-                println!("{:?}", matching_titles);
-            }
 
             // If none, search through all descriptions for titles
             if matching_titles.is_empty() {
