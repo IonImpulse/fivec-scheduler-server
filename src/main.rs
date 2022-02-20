@@ -241,6 +241,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(get_locations_database)
             .service(get_status)
             .service(get_full_year_catalog)
+            .service(get_catalog_if_stale)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()

@@ -11,6 +11,13 @@ struct ReturnCourses {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+
+struct ReturnCatalog {
+    timestamp: u64,
+    catalog: Vec<CourseDescription>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct ReturnCourseList {
     code: String,
     courses: SharedCourseList,
@@ -136,8 +143,32 @@ pub async fn get_full_year_catalog(_path: web::Path<()>) -> HttpResponse {
     let lock = MEMORY_DATABASE.lock().await;
 
     let year_catalog = lock.descriptions_cache.clone();
+    let last_change = lock.last_change.clone();
 
     drop(lock);
 
-    HttpResponse::Ok().json(year_catalog)
+    HttpResponse::Ok().json(ReturnCatalog { timestamp: last_change, catalog: year_catalog })
+}
+
+#[get("/getCatalogIfStale/{unix_timestamp_seconds}")]
+pub async fn get_catalog_if_stale(path: web::Path<u64>) -> HttpResponse {
+    let unix_timestamp_seconds = path.into_inner();
+
+    let mut lock = MEMORY_DATABASE.lock().await;
+    
+    lock.add_ten_log();
+    
+    
+    if &lock.last_change != &unix_timestamp_seconds {
+        info!("Serving catalog update!");
+        let year_catalog = lock.descriptions_cache.clone();
+        let timestamp = lock.last_change.clone();
+
+        drop(lock);
+
+        HttpResponse::Ok().json(ReturnCatalog{ timestamp: timestamp, catalog: year_catalog })
+    } else {
+        info!("No catalog update needed!");
+        HttpResponse::Ok().json("No update needed")
+    }
 }
