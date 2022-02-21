@@ -31,7 +31,6 @@ lazy_static! {
     static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
 }
 
-
 // Simple pair that can be used to merge into actual course data
 // "Classic Title" refers to the college's way of identifying the course:
 // "ASAM126 HM" instead of "ASAM-126-HM-{section_num}"
@@ -46,6 +45,7 @@ pub struct CourseDescription {
     pub offered: String,
     pub prerequisites: String,
     pub corequisites: String,
+    pub currently_offered: bool,
 }
 
 impl CourseDescription {
@@ -59,6 +59,7 @@ impl CourseDescription {
         offered: String,
         prerequisites: String,
         corequisites: String,
+        currently_offered: bool,
     ) -> CourseDescription {
         CourseDescription {
             title,
@@ -70,11 +71,16 @@ impl CourseDescription {
             offered,
             prerequisites,
             corequisites,
+            currently_offered,
         }
     }
 
     pub fn set_instructors(&mut self, instructors: Vec<String>) {
         self.instructors = instructors;
+    }
+
+    pub fn set_offered(&mut self) {
+        self.currently_offered = true;
     }
 }
 
@@ -261,7 +267,7 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
                 .to_string();
 
             let mut target = "".to_string();
-                
+
             println!("{:?}", split_line);
 
             if split_line[1].contains("<br>Credit:") {
@@ -377,6 +383,7 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
             when_offered,
             prerequisites,
             corequisites,
+            false,
         ));
     }
 
@@ -505,7 +512,7 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     let pitzer_courses = scrape_url(pitzer_url, Pitzer).await?;
     info!("Scraping Pomona descriptions");
     let pomona_courses = scrape_url(pomona_url, Pomona).await?;
-    
+
     let mut all_descs = merge_descriptions(vec![
         hmc_courses,
         cmc_courses,
@@ -542,6 +549,8 @@ pub fn merge_description_and_courses(
                 .unwrap();
 
             desc.set_instructors(new_course.get_instructors());
+            desc.set_offered();
+
             if desc.credits == 0 {
                 desc.credits = new_course.get_credits().clone();
             }
@@ -566,7 +575,6 @@ pub fn merge_description_and_courses(
         total_added_descs,
         courses_vec.len()
     );
-
 
     // Get reqs from notes
     for mut course in courses_vec.iter_mut() {
@@ -662,18 +670,31 @@ pub fn find_description(
                 );
             }
         } else {
-            // Otherwise, search the matching identifiers for titles
-            let matching_titles = find_fuzzy_title(&course_title, &matching_identifiers);
+            if matching_identifiers.len() == 1 {
+                return Some(matching_identifiers[0].clone());
+            } else {
+                // Otherwise, search the matching identifiers for titles
+                let matching_titles = find_fuzzy_title(&course_title, &matching_identifiers);
 
-            // If none, search through all descriptions for titles
-            if matching_titles.is_empty() {
-                let matching_titles = find_fuzzy_title(&course_title, &course_descriptions);
-
-                // If none, return None
+                // If none, search through all descriptions for titles
                 if matching_titles.is_empty() {
-                    return None;
+                    let matching_titles = find_fuzzy_title(&course_title, &course_descriptions);
+
+                    // If none, return None
+                    if matching_titles.is_empty() {
+                        return None;
+                    } else {
+                        // Return best if found
+                        return Some(
+                            course_descriptions
+                                .iter()
+                                .find(|d| d.title == matching_titles[0])
+                                .unwrap()
+                                .clone(),
+                        );
+                    }
                 } else {
-                    // Return best if found
+                    // Otherwise, return best if found
                     return Some(
                         course_descriptions
                             .iter()
@@ -682,15 +703,6 @@ pub fn find_description(
                             .clone(),
                     );
                 }
-            } else {
-                // Otherwise, return best if found
-                return Some(
-                    course_descriptions
-                        .iter()
-                        .find(|d| d.title == matching_titles[0])
-                        .unwrap()
-                        .clone(),
-                );
             }
         }
     } else {
@@ -728,11 +740,14 @@ pub fn merge_courses(previous: Vec<Course>, new: Vec<Course>) -> Vec<Course> {
                     final_course.set_notes(previous_course.get_notes().to_string());
                 }
 
-                if final_course.get_prerequisites().len() < previous_course.get_prerequisites().len() {
+                if final_course.get_prerequisites().len()
+                    < previous_course.get_prerequisites().len()
+                {
                     final_course.set_prerequisites(previous_course.get_prerequisites());
                 }
 
-                if final_course.get_corequisites().len() < previous_course.get_corequisites().len() {
+                if final_course.get_corequisites().len() < previous_course.get_corequisites().len()
+                {
                     final_course.set_corequisites(previous_course.get_corequisites());
                 }
             }
