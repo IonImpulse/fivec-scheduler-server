@@ -104,9 +104,6 @@ pub fn pitzer_url(page_num: u64) -> String {
 }
 
 pub fn between(str: &str, start: &str, end: &str) -> String {
-    println!("Searching for {} to {}", start, end);
-    println!("{}", str);
-
     let start_pos = &str[str.find(start).unwrap() + start.len()..];
 
     start_pos[..start_pos.find(end).unwrap_or(start_pos.len())]
@@ -115,7 +112,7 @@ pub fn between(str: &str, start: &str, end: &str) -> String {
 }
 
 pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDescription>> {
-    let mut html_vec: Vec<String> = html.split("\n").filter(|x| x.is_ascii()).map(|x| x.to_string()).collect();
+    let mut html_vec: Vec<String> = html.split("\n").map(|x| x.to_string()).collect();
 
     let start_indexes = html_vec
         .iter()
@@ -134,7 +131,6 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
         }
 
         let current_line = line.replace("</a></h3><h3>", "");
-
         let split_line = current_line.split("</h3>").collect::<Vec<&str>>();
 
         let mut identifier = split_line
@@ -180,13 +176,13 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
             } else {
                 description = temp
                     .unwrap()
-                    .split("<br><br>")
+                    .split("<br>")
                     .nth(0)
                     .unwrap()
                     .trim()
                     .to_string();
 
-                credits = between(split_line[1], "<strong>Credit(s):</strong>", "<br><br>")
+                credits = between(split_line[1], "<strong>Credit(s):</strong> ", "<br>")
                     .parse::<f64>()
                     .unwrap_or(0.0);
 
@@ -499,10 +495,10 @@ pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
 }
 
 pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
-    info!("Scraping CMC descriptions");
-    let cmc_courses = scrape_url(cmc_url, ClaremontMckenna).await?;
     info!("Scraping HMC descriptions");
     let hmc_courses = scrape_url(hmc_url, HarveyMudd).await?;
+    info!("Scraping CMC descriptions");
+    let cmc_courses = scrape_url(cmc_url, ClaremontMckenna).await?;
     info!("Scraping Scripps descriptions");
     let scripps_courses = scrape_url(scripps_url, Scripps).await?;
     info!("Scraping Pitzer descriptions");
