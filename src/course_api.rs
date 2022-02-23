@@ -1,27 +1,28 @@
-use ::serde::*;
-use serde_json::{Value};
-use chrono::*;
-use reqwest::*;
-use reqwest::header::*;
-use crate::http::Method;
-use rand::{thread_rng, Rng};
-use std::{thread, time};
 use crate::database::*;
-use crate::scrape_descriptions::*;
-use regex::Regex;
+use crate::http::Method;
 use crate::locations::*;
+use crate::scrape_descriptions::*;
+use ::serde::*;
+use chrono::*;
+use rand::{thread_rng, Rng};
+use regex::Regex;
+use reqwest::header::*;
+use reqwest::*;
+use serde_json::Value;
+use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::{Error, Read, Write};
-use std::collections::HashMap;
+use std::{thread, time};
+use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
 
-const POM_API: &str = "https://jicsweb.pomona.edu/API/";
+const POM_API: &str = "https://jicsweb.pomona.edu/api/";
 const POM_COURSES: &str = "Courses/";
 const POM_TERMS: &str = "Terms/";
 const POM_COURSE_AREAS: &str = "Courseareas/";
 const POM_HEADERS: &str = "text/json; charset=utf-8";
-const COURSE_REGEX: &str = r"/([A-Z]+){1} ?([0-9]+[A-Z]*){1} ?([A-Z]{2})?-([0-9][0-9])/g";
+const COURSE_REGEX: &str = r"([A-Z]+){1} *([0-9]+[ -Z]{0,3}){1} {0,2}([A-Z]{2})?-([0-9]*)";
 
 const TIME_FMT: &str = "%I:%M%p";
 
@@ -68,7 +69,7 @@ impl School {
             "CG" | "CGU" => School::ClaremontGraduate,
             _ => School::NA,
         }
-    }     
+    }
 }
 
 impl Day {
@@ -125,7 +126,11 @@ impl Location {
     }
 
     pub fn get_full_location(&self) -> (School, String, String) {
-        (self.school.clone(), self.building.clone(), self.room.clone())
+        (
+            self.school.clone(),
+            self.building.clone(),
+            self.room.clone(),
+        )
     }
 }
 
@@ -206,6 +211,7 @@ pub struct Course {
     prerequisites: String,
     corequisites: String,
     offered: String,
+    perm_count: u64,
 }
 
 impl Course {
@@ -300,11 +306,11 @@ impl Course {
 
     pub fn get_school(&self) -> Option<School> {
         let timing = self.timing.get(0);
-        
+
         if let Some(timing) = timing {
-            return Some(timing.location.school.clone())
+            return Some(timing.location.school.clone());
         } else {
-            return None
+            return None;
         }
     }
 
@@ -333,7 +339,6 @@ impl Course {
 
         for (i, c) in reqs.clone().chars().enumerate() {
             if i > 0 && i < reqs.len() - 1 {
-
                 // If a lowercase letter is followed by a capital letter, add a space
                 // EX: andE80 => and E80
                 if c.is_uppercase() && reqs.chars().nth(i - 1).unwrap().is_lowercase() {
@@ -359,17 +364,50 @@ impl Course {
         reqs
     }
 
-    pub fn new_from_full_pom(pom: serde_json::Value) -> Course {
+    pub fn set_perm_count(&mut self, perm_count: u64) {
+        self.perm_count = perm_count;
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+struct PartialPomCourse {
+    course_code: String,
+    identifier: String,
+    title: String,
+    description: String,
+    perm_count: u64,
+}
+
+impl PartialPomCourse {
+    pub fn new_from_area_pom(pom: serde_json::Value) -> PartialPomCourse {
         let re = Regex::new(COURSE_REGEX).unwrap();
 
-        let groups = re.captures(pom["CourseCode"].as_str().unwrap_or("")).unwrap();
+        let course_code = pom["CourseCode"].as_str().unwrap().to_string();
+
+        println!("{}", course_code);
+
+        let groups = re
+            .captures(&course_code)
+            .unwrap();
+
         let code = groups[0].to_string();
         let id = groups[1].to_string();
         let dept = groups[2].to_string();
         let section = groups[3].to_string();
 
+        let identifier = Course::create_identifier(code, id, dept, section);
+
         let title = pom["Name"].as_str().unwrap_or("").to_string();
 
+        let description = pom["Description"].as_str().unwrap_or("").to_string();
+
+        PartialPomCourse {
+            course_code: pom["CourseCode"].to_string(),
+            identifier,
+            title,
+            description,
+            perm_count: 0,
+        }
     }
 }
 
@@ -437,7 +475,6 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         dept = second_half.get(1).unwrap().to_string();
         section = second_half.get(3).unwrap_or(&"typo").to_string();
     }
-
 
     if section == "typo" {
         section = dept;
@@ -554,24 +591,32 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     }
 
     // Get instructors
-    let instructors: Vec<String> = group[5].split("<BR>").map(|x| {
-        let to_return: String;
+    let instructors: Vec<String> = group[5]
+        .split("<BR>")
+        .map(|x| {
+            let to_return: String;
 
-        if x.contains(",") {
-            let temp_instructor: Vec<&str> = x.split(",").collect();
-            to_return = format!("{} {}", temp_instructor[1], temp_instructor[0]);
-        } else {
-            to_return = x.to_string();
-        }
-        
-        to_return.trim().to_string()
-    }).collect();
+            if x.contains(",") {
+                let temp_instructor: Vec<&str> = x.split(",").collect();
+                to_return = format!("{} {}", temp_instructor[1], temp_instructor[0]);
+            } else {
+                to_return = x.to_string();
+            }
+
+            to_return.trim().to_string()
+        })
+        .collect();
 
     // Get notes
-    let notes = group[6].trim().to_string().replace("<BR>", ". ").replace("..", ".");
+    let notes = group[6]
+        .trim()
+        .to_string()
+        .replace("<BR>", ". ")
+        .replace("..", ".");
 
-    // Create identifier 
-    let identifier = Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
+    // Create identifier
+    let identifier =
+        Course::create_identifier(code.clone(), id.clone(), dept.clone(), section.clone());
 
     let credits_hmc: u64;
 
@@ -581,7 +626,6 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
     } else {
         credits_hmc = credits * 3;
     }
-
 
     Course {
         identifier,
@@ -603,6 +647,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         prerequisites: "".to_string(),
         corequisites: "".to_string(),
         offered: "".to_string(),
+        perm_count: 0,
     }
 }
 
@@ -623,12 +668,12 @@ pub async fn get_all_courses() -> Result<(String, Vec<Course>)> {
 
     // Get term
     let term = get_term(&data);
-    
+
     // Clean raw html data
     let html_rows = get_rows_clean(&data);
 
     if html_rows.is_none() || term.is_none() {
-        return Ok(("".to_string(), Vec::new()))
+        return Ok(("".to_string(), Vec::new()));
     }
 
     // Group rows into courses
@@ -643,7 +688,10 @@ pub async fn get_all_courses() -> Result<(String, Vec<Course>)> {
     Ok((term.unwrap().to_string(), courses))
 }
 
-pub fn merge_locations(current_locations: HashMap<String, (String, String)>, new_locations: HashMap<String, (String, String)>) -> HashMap<String, (String,String)> {
+pub fn merge_locations(
+    current_locations: HashMap<String, (String, String)>,
+    new_locations: HashMap<String, (String, String)>,
+) -> HashMap<String, (String, String)> {
     let mut locations = current_locations;
 
     for (key, value) in new_locations {
@@ -653,36 +701,42 @@ pub fn merge_locations(current_locations: HashMap<String, (String, String)>, new
     }
 
     locations
-
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CourseArea {
-    code: String,
-    descripton: String,
+pub struct CourseArea {
+    Code: String,
+    Description: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Term {
-    description: String,
-    key: String,
-    session: String,
-    subsession: String,
-    year: String,
+pub struct Term {
+    Description: String,
+    Key: String,
+    Session: String,
+    SubSession: String,
+    Year: String,
 }
 
 pub async fn get_areas() -> std::result::Result<Vec<CourseArea>, Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
-    
+
     // Get data from POM API
     let client = reqwest::Client::new();
-    let data = client.request(Method::GET, format!("{}{}", POM_API,POM_COURSE_AREAS)).headers(headers).send().await?;
+    let data = client
+        .request(Method::GET, format!("{}{}", POM_API, POM_COURSE_AREAS))
+        .headers(headers)
+        .send()
+        .await?;
 
     let data = data.text().await?;
 
     // Deserialize json
     let areas: Vec<CourseArea> = serde_json::from_str(&data)?;
+
+    println!("Got {} areas", areas.len());
+    println!("{:?}", areas);
 
     Ok(areas)
 }
@@ -690,46 +744,94 @@ pub async fn get_areas() -> std::result::Result<Vec<CourseArea>, Box<dyn std::er
 pub async fn get_terms() -> std::result::Result<Vec<Term>, Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
-    
+
     // Get data from POM API
     let client = reqwest::Client::new();
-    let data = client.request(Method::GET, format!("{}{}", POM_API,POM_TERMS)).headers(headers).send().await?;
+    let data = client
+        .request(Method::GET, format!("{}{}", POM_API, POM_TERMS))
+        .headers(headers)
+        .send()
+        .await?;
 
     let data = data.text().await?;
 
-    // Deserialize json 
+    // Deserialize json
     let terms: Vec<Term> = serde_json::from_str(&data)?;
+
+    println!("Got {} terms", terms.len());
+    println!("{:?}", terms[0]);
 
     Ok(terms)
 }
 
-pub async fn get_pom_courses(areas: Vec<CourseArea>, term: Term) -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
+pub async fn get_pom_courses(
+    areas: Vec<CourseArea>,
+    term: Term,
+) -> std::result::Result<Vec<PartialPomCourse>, Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
-    
+
     // Get data from POM API
     let client = reqwest::Client::new();
 
-    let mut courses: Vec<Course> = Vec::new();
+    let mut courses: Vec<PartialPomCourse> = Vec::new();
+
+    // Get all courses
+    let all_courses_data = client.request(Method::GET, format!("{}{}{}", POM_API, POM_COURSES, term.Key)).headers(
+        headers.clone())
+        .send()
+        .await?;
+    let all_courses_data = all_courses_data.text().await?;
+
+    let all_courses: Value = serde_json::from_str(&all_courses_data)?;
+    println!("Got {:?} courses", all_courses);
+    let all_courses = all_courses.as_array().unwrap();
 
     for area in areas {
-        let data = client.request(Method::GET, format!("{}{}{}/{}", POM_API, POM_COURSES, term.key, area.code)).headers(headers.clone()).send().await?;
+        println!("Getting courses for area {}", area.Code);
+        thread::sleep(Duration::from_secs(1));
+
+        let data = client
+            .request(
+                Method::GET,
+                format!("{}{}{}/{}", POM_API, POM_COURSES, term.Key, area.Code),
+            )
+            .headers(headers.clone())
+            .send()
+            .await?;
 
         let data = data.text().await?;
 
+        if data.is_empty() {
+            println!("No courses found for area {}", area.Code);
+            continue;
+        }
+
         // Deserialize json
-        let course_pom: Value = serde_json::from_str(&data)?;
+        let courses_pom: Value = serde_json::from_str(&data)?;
+        let courses_pom = courses_pom.as_array().unwrap();
+        
+        for course_pom in courses_pom {
+            let mut course = PartialPomCourse::new_from_area_pom(course_pom.clone());
+        
+            // Find matching course
+            for c in all_courses {
+                if c["CourseCode"] == course.course_code {
+                    course.perm_count = c["PermCount"].as_u64().unwrap();
+                    break;
+                }
+            }
+    
+            courses.push(course);
+        }
 
-        let course = Course::new_from_full_pom(course_pom);
-
-        courses.append(&mut course.clone());
+        
     }
-
 
     Ok(courses)
 }
 
-pub async fn full_pomona_update() -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
+pub async fn full_pomona_update() -> std::result::Result<Vec<PartialPomCourse>, Box<dyn std::error::Error>> {
     // First, get the course areas from the API
     let areas = get_areas().await?;
 
@@ -737,8 +839,7 @@ pub async fn full_pomona_update() -> std::result::Result<Vec<Course>, Box<dyn st
     let terms = get_terms().await?;
 
     // Then, get the courses for each area
-    let courses = get_pom_courses(areas, term[0]).await?;
-
+    let courses = get_pom_courses(areas, terms[0].clone()).await?;
 
     Ok(courses)
 }
@@ -748,7 +849,19 @@ pub async fn test_full_update() {
     println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
-    
+
+    println!("Getting pomona courses");
+    let pom_courses = full_pomona_update().await.unwrap();
+
+    // Save courses to file
+    let mut writer = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("pom_courses.json").unwrap();
+
+    let serialized_output = serde_json::to_string(&pom_courses).unwrap();
+
+    writer.write(serialized_output.as_bytes());
     /*
     let current_locations = load_locations_database().unwrap();
 
@@ -764,11 +877,11 @@ pub async fn test_full_update() {
     let serialized_output = serde_json::to_string(&new_locations).unwrap();
 
     writer.write(serialized_output.as_bytes());
-    
+
      */
 
     let mut all_descriptions = scrape_all_descriptions().await.unwrap();
-    
+
     //let mut all_descriptions = load_descriptions_database().unwrap();
 
     let all_descriptions = find_reqs(&mut all_descriptions);
