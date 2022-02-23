@@ -26,3 +26,4 @@ regex = "*"
 escaper = "*"
 csv = "*"
 rust-fuzzy-search = { git = "https://gitlab.com/EnricoCh/rust-fuzzy-search"}
+roxmltree = "*"

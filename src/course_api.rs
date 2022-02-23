@@ -1,16 +1,28 @@
 use ::serde::*;
+use serde_json::{Value};
 use chrono::*;
 use reqwest::*;
+use reqwest::header::*;
+use crate::http::Method;
 use rand::{thread_rng, Rng};
 use std::{thread, time};
 use crate::database::*;
 use crate::scrape_descriptions::*;
+use regex::Regex;
 use crate::locations::*;
 use std::fs::OpenOptions;
 use std::io::{Error, Read, Write};
 use std::collections::HashMap;
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
+
+const POM_API: &str = "https://jicsweb.pomona.edu/API/";
+const POM_COURSES: &str = "Courses/";
+const POM_TERMS: &str = "Terms/";
+const POM_COURSE_AREAS: &str = "Courseareas/";
+const POM_HEADERS: &str = "text/json; charset=utf-8";
+const COURSE_REGEX: &str = r"/([A-Z]+){1} ?([0-9]+[A-Z]*){1} ?([A-Z]{2})?-([0-9][0-9])/g";
+
 const TIME_FMT: &str = "%I:%M%p";
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -346,6 +358,19 @@ impl Course {
 
         reqs
     }
+
+    pub fn new_from_full_pom(pom: serde_json::Value) -> Course {
+        let re = Regex::new(COURSE_REGEX).unwrap();
+
+        let groups = re.captures(pom["CourseCode"].as_str().unwrap_or("")).unwrap();
+        let code = groups[0].to_string();
+        let id = groups[1].to_string();
+        let dept = groups[2].to_string();
+        let section = groups[3].to_string();
+
+        let title = pom["Name"].as_str().unwrap_or("").to_string();
+
+    }
 }
 
 pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
@@ -629,6 +654,93 @@ pub fn merge_locations(current_locations: HashMap<String, (String, String)>, new
 
     locations
 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CourseArea {
+    code: String,
+    descripton: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Term {
+    description: String,
+    key: String,
+    session: String,
+    subsession: String,
+    year: String,
+}
+
+pub async fn get_areas() -> std::result::Result<Vec<CourseArea>, Box<dyn std::error::Error>> {
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
+    
+    // Get data from POM API
+    let client = reqwest::Client::new();
+    let data = client.request(Method::GET, format!("{}{}", POM_API,POM_COURSE_AREAS)).headers(headers).send().await?;
+
+    let data = data.text().await?;
+
+    // Deserialize json
+    let areas: Vec<CourseArea> = serde_json::from_str(&data)?;
+
+    Ok(areas)
+}
+
+pub async fn get_terms() -> std::result::Result<Vec<Term>, Box<dyn std::error::Error>> {
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
+    
+    // Get data from POM API
+    let client = reqwest::Client::new();
+    let data = client.request(Method::GET, format!("{}{}", POM_API,POM_TERMS)).headers(headers).send().await?;
+
+    let data = data.text().await?;
+
+    // Deserialize json 
+    let terms: Vec<Term> = serde_json::from_str(&data)?;
+
+    Ok(terms)
+}
+
+pub async fn get_pom_courses(areas: Vec<CourseArea>, term: Term) -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
+    
+    // Get data from POM API
+    let client = reqwest::Client::new();
+
+    let mut courses: Vec<Course> = Vec::new();
+
+    for area in areas {
+        let data = client.request(Method::GET, format!("{}{}{}/{}", POM_API, POM_COURSES, term.key, area.code)).headers(headers.clone()).send().await?;
+
+        let data = data.text().await?;
+
+        // Deserialize json
+        let course_pom: Value = serde_json::from_str(&data)?;
+
+        let course = Course::new_from_full_pom(course_pom);
+
+        courses.append(&mut course.clone());
+    }
+
+
+    Ok(courses)
+}
+
+pub async fn full_pomona_update() -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
+    // First, get the course areas from the API
+    let areas = get_areas().await?;
+
+    // Then, get the course terms
+    let terms = get_terms().await?;
+
+    // Then, get the courses for each area
+    let courses = get_pom_courses(areas, term[0]).await?;
+
+
+    Ok(courses)
 }
 
 pub async fn test_full_update() {
