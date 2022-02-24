@@ -83,7 +83,7 @@ pub fn get_unix_timestamp() -> u64 {
 
 async fn update_loop() -> std::io::Result<()> {
     let mut number_of_repeated_errors: u64 = 0;
-    let mut time_until_description_update = 1;
+    let mut time_until_description_update = 0;
 
     loop {
         info!("Starting schedule API update...");
