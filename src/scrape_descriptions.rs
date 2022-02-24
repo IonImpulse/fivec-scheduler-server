@@ -165,6 +165,8 @@ pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDesc
             return Ok(return_vec);
         }
 
+        identifier = convert_course_code_to_identifier(&identifier);
+
         // Guaranteed to exist
         let description;
 
@@ -444,9 +446,15 @@ pub fn merge_descriptions(schools_vec: Vec<Vec<CourseDescription>>) -> Vec<Cours
             .iter()
             .position(|r| r.title == course_desc.title && r.identifier == course_desc.identifier);
         if found.is_some() {
+            
+            if return_map[found.unwrap()].source == School::NA {
+                return_map[found.unwrap()].currently_offered = course_desc.currently_offered;
+            }
+
             if return_map[found.unwrap()].description.len() < course_desc.description.len() {
                 return_map[found.unwrap()] = course_desc;
             }
+
         } else {
             return_map.push(course_desc);
         }
@@ -501,7 +509,33 @@ pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
     descs.to_vec()
 }
 
+pub fn convert_courses_to_descs(courses: Vec<PartialPomCourse>) -> Vec<CourseDescription> {
+    let mut return_vec = Vec::new();
+
+    for course in courses {
+        return_vec.push(CourseDescription{
+            title: course.title.clone(),
+            identifier: course.identifier.clone(),
+            description: course.description.clone(),
+            source: School::NA,
+            credits: course.credits.clone(),
+            instructors: Vec::new(),
+            offered:"".to_string(),
+            currently_offered: true,
+            prerequisites: String::new(),
+            corequisites: String::new(),
+        })
+    }
+
+    return_vec    
+}
+
 pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
+    info!("Scraping Pomona API for current courses");
+    let courses = full_pomona_update().await.unwrap();
+
+    let converted_courses = convert_courses_to_descs(courses);
+
     info!("Scraping HMC descriptions");
     let hmc_courses = scrape_url(hmc_url, HarveyMudd).await?;
     info!("Scraping CMC descriptions");
@@ -514,6 +548,7 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     let pomona_courses = scrape_url(pomona_url, Pomona).await?;
 
     let mut all_descs = merge_descriptions(vec![
+        converted_courses,
         hmc_courses,
         cmc_courses,
         pomona_courses,
@@ -545,7 +580,7 @@ pub fn merge_description_and_courses(
 
             let index = descs_vec
                 .iter()
-                .position(|r| &r.title == &desc.title && &r.identifier == &desc.identifier)
+                .position(|r| &r.title == &desc.title && r.identifier.contains(&desc.identifier))
                 .unwrap();
 
             desc.set_instructors(new_course.get_instructors());
@@ -619,7 +654,7 @@ pub fn find_description(
     // Only use from own catalog
     let course_descriptions: Vec<CourseDescription> = course_descriptions
         .iter()
-        .filter(|x| Some(x.source.clone()) == course.get_school())
+        .filter(|x| Some(x.source.clone()) == course.get_school() || x.source == School::NA)
         .map(|x| x.clone())
         .collect();
 
@@ -635,7 +670,7 @@ pub fn find_description(
             .to_string();
     }
 
-    let course_identifier = course.get_desc_scrape_str();
+    let course_identifier = course.get_identifier();
 
     // Check for exact match first
     let exact_title_match = course_descriptions
@@ -648,7 +683,7 @@ pub fn find_description(
         let matching_identifiers: Vec<CourseDescription> = course_descriptions
             .iter()
             .cloned()
-            .filter(|d| d.identifier == course_identifier)
+            .filter(|d| course_identifier.contains(&d.identifier))
             .collect();
 
         // If none, search the entire list for titles:

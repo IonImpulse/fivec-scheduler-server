@@ -90,6 +90,12 @@ async fn update_loop() -> std::io::Result<()> {
 
         info!("Retrieving course info...");
         let course_update = get_all_courses().await;
+        
+        info!("Retrieving terms...");
+        let terms = get_terms().await.unwrap();
+        info!("Retrieving perm numbers...");
+        let perm_numbers = get_perm_numbers(&terms[0].Key).await.unwrap();
+        
         let number_of_courses: usize;
         let mut term_update = "".to_string();
 
@@ -108,6 +114,8 @@ async fn update_loop() -> std::io::Result<()> {
                 number_of_courses = 0;
                 error!("No courses found!");
             } else {
+                final_course_update = merge_perms_into_courses(final_course_update, perm_numbers);
+
                 number_of_repeated_errors = 0;
                 info!("Successfully updated courses!");
                 number_of_courses = final_course_update.len();

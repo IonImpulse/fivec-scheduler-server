@@ -370,12 +370,13 @@ impl Course {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-struct PartialPomCourse {
-    course_code: String,
-    identifier: String,
-    title: String,
-    description: String,
-    perm_count: u64,
+pub struct PartialPomCourse {
+    pub course_code: String,
+    pub identifier: String,
+    pub title: String,
+    pub description: String,
+    pub perm_count: u64,
+    pub credits: u64,
 }
 
 impl PartialPomCourse {
@@ -384,22 +385,15 @@ impl PartialPomCourse {
 
         let course_code = pom["CourseCode"].as_str().unwrap().to_string();
 
-        println!("{}", course_code);
+        let identifier = convert_course_code_to_identifier(&course_code);
 
-        let groups = re
-            .captures(&course_code)
-            .unwrap();
+        println!("{}",identifier);
 
-        let code = groups[0].to_string();
-        let id = groups[1].to_string();
-        let dept = groups[2].to_string();
-        let section = groups[3].to_string();
-
-        let identifier = Course::create_identifier(code, id, dept, section);
-
-        let title = pom["Name"].as_str().unwrap_or("").to_string();
+        let title = pom["Name"].as_str().unwrap_or("").trim().to_string();
 
         let description = pom["Description"].as_str().unwrap_or("").to_string();
+
+        let credits = (pom["Credits"].as_str().unwrap_or("").replace("\"","").parse::<f64>().unwrap_or(0.)) as u64 * 100;
 
         PartialPomCourse {
             course_code: pom["CourseCode"].to_string(),
@@ -407,8 +401,51 @@ impl PartialPomCourse {
             title,
             description,
             perm_count: 0,
+            credits,
         }
     }
+}
+
+pub fn convert_course_code_to_identifier(code: &str) -> String {
+    let mut normalized_course_code = code.to_string();
+    normalized_course_code.retain(|c| !c.is_whitespace());
+
+    let mut other: String;
+    let section: String;
+
+    if normalized_course_code.contains("-") {
+        let mut split = normalized_course_code.split("-");
+        other = split.nth(0).unwrap().to_string();
+        section = split.nth(0).unwrap().to_string();
+    } else {
+        other = normalized_course_code;
+        section = "".to_string();
+    }
+
+    let dept = other[other.len() - 2..other.len()].to_string();
+    other = other[..other.len() - 2].to_string();
+
+    let mut split_point = 0;
+    let mut found_letter = false;
+    let mut found_num = false;
+
+    for (i, c) in other.chars().enumerate() {
+        if c.is_alphabetic() {
+            found_letter = true;
+        } else if c.is_numeric() {
+            found_num = true;
+        }
+
+        if found_letter && found_num {
+            split_point = i;
+            break;
+        }
+    }
+
+    let code = &other[..split_point];
+    let id = &other[split_point..];
+
+    format!("{}-{}-{}-{}", code, id, dept, section)
 }
 
 pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
@@ -712,7 +749,7 @@ pub struct CourseArea {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
     Description: String,
-    Key: String,
+    pub Key: String,
     Session: String,
     SubSession: String,
     Year: String,
@@ -764,6 +801,34 @@ pub async fn get_terms() -> std::result::Result<Vec<Term>, Box<dyn std::error::E
     Ok(terms)
 }
 
+pub async fn get_perm_numbers(term_key: &str) -> std::result::Result<HashMap<String, u64>, Box<dyn std::error::Error>> {
+    let client = reqwest::Client::new();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
+
+    // Get all courses
+    let all_courses_data = client.request(Method::GET, format!("{}{}{}", POM_API, POM_COURSES, term_key)).headers(
+        headers.clone())
+        .send()
+        .await?;
+    let all_courses_data = all_courses_data.text().await?;
+
+    let all_courses: Value = serde_json::from_str(&all_courses_data)?;
+
+    let mut perm_numbers = HashMap::new();
+
+    for course in all_courses.as_array().unwrap() {
+        let perm_number = course["PermCount"].as_str().unwrap_or("0").replace("\"","");
+        let course_code = course["CourseCode"].as_str().unwrap();
+        let identifier = convert_course_code_to_identifier(course_code);
+
+        perm_numbers.insert(identifier, perm_number.parse::<u64>().unwrap_or(0));
+    }
+
+    Ok(perm_numbers)
+}
+
 pub async fn get_pom_courses(
     areas: Vec<CourseArea>,
     term: Term,
@@ -776,20 +841,14 @@ pub async fn get_pom_courses(
 
     let mut courses: Vec<PartialPomCourse> = Vec::new();
 
-    // Get all courses
-    let all_courses_data = client.request(Method::GET, format!("{}{}{}", POM_API, POM_COURSES, term.Key)).headers(
-        headers.clone())
-        .send()
-        .await?;
-    let all_courses_data = all_courses_data.text().await?;
-
-    let all_courses: Value = serde_json::from_str(&all_courses_data)?;
-    println!("Got {:?} courses", all_courses);
-    let all_courses = all_courses.as_array().unwrap();
+    let all_courses = get_perm_numbers(&term.Key).await?;
 
     for area in areas {
         println!("Getting courses for area {}", area.Code);
-        thread::sleep(Duration::from_secs(1));
+
+        if area.Code.contains("/") {
+            continue;
+        }
 
         let data = client
             .request(
@@ -815,12 +874,7 @@ pub async fn get_pom_courses(
             let mut course = PartialPomCourse::new_from_area_pom(course_pom.clone());
         
             // Find matching course
-            for c in all_courses {
-                if c["CourseCode"] == course.course_code {
-                    course.perm_count = c["PermCount"].as_u64().unwrap();
-                    break;
-                }
-            }
+            course.perm_count = *all_courses.get(&course.identifier).unwrap_or(&0);
     
             courses.push(course);
         }
@@ -844,24 +898,31 @@ pub async fn full_pomona_update() -> std::result::Result<Vec<PartialPomCourse>, 
     Ok(courses)
 }
 
+pub fn merge_perms_into_courses(courses: Vec<Course>, perm_hashmap: HashMap<String, u64>) -> Vec<Course> {
+    let courses = courses.iter().map(|course| {
+        let perm_count = perm_hashmap.get(&course.get_identifier()).unwrap_or(&0);
+        let mut new_course = course.clone();
+        new_course.perm_count = *perm_count;
+        new_course
+    }).collect::<Vec<Course>>();
+
+    courses
+}
+
 pub async fn test_full_update() {
     let course_tuple = get_all_courses().await.unwrap();
     println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
 
-    println!("Getting pomona courses");
-    let pom_courses = full_pomona_update().await.unwrap();
+    let terms = get_terms().await.unwrap();
+    let perm_map = get_perm_numbers(&terms[0].Key).await.unwrap();
+    println!("{:?}", perm_map);
 
-    // Save courses to file
-    let mut writer = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open("pom_courses.json").unwrap();
+    let all_courses = merge_perms_into_courses(all_courses, perm_map);
 
-    let serialized_output = serde_json::to_string(&pom_courses).unwrap();
+    save_course_database(all_courses.clone()).unwrap();
 
-    writer.write(serialized_output.as_bytes());
     /*
     let current_locations = load_locations_database().unwrap();
 
@@ -880,9 +941,9 @@ pub async fn test_full_update() {
 
      */
 
-    let mut all_descriptions = scrape_all_descriptions().await.unwrap();
+    // let mut all_descriptions = scrape_all_descriptions().await.unwrap();
 
-    //let mut all_descriptions = load_descriptions_database().unwrap();
+    let mut all_descriptions = load_descriptions_database().unwrap();
 
     let all_descriptions = find_reqs(&mut all_descriptions);
 
