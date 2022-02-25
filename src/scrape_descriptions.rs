@@ -449,10 +449,11 @@ pub fn merge_descriptions(schools_vec: Vec<Vec<CourseDescription>>) -> Vec<Cours
             
             if return_map[found.unwrap()].source == School::NA {
                 return_map[found.unwrap()].currently_offered = course_desc.currently_offered;
+                return_map[found.unwrap()].source = course_desc.source;
             }
 
             if return_map[found.unwrap()].description.len() < course_desc.description.len() {
-                return_map[found.unwrap()] = course_desc;
+                return_map[found.unwrap()].description = course_desc.description;
             }
 
         } else {
