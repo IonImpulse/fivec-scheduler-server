@@ -82,6 +82,14 @@ impl CourseDescription {
     pub fn set_offered(&mut self) {
         self.currently_offered = true;
     }
+
+    pub fn set_source(&mut self, source: School) {
+        self.source = source;
+    }
+
+    pub fn get_source(&self) -> &School {
+        &self.source
+    }
 }
 
 // Serves only HMC classes
@@ -442,20 +450,34 @@ pub fn merge_descriptions(schools_vec: Vec<Vec<CourseDescription>>) -> Vec<Cours
     let schools_vec_flat = schools_vec.into_iter().flatten();
 
     for course_desc in schools_vec_flat {
-        let mut found = return_map
-            .iter()
-            .position(|r| r.title == course_desc.title && r.identifier == course_desc.identifier);
-        if found.is_some() {
+        // First search for all indexes for identifier
+        let mut indexes: Vec<usize> = Vec::new();
+        for (i, course) in return_map.iter().enumerate() {
+            if course.identifier.contains(&course_desc.identifier) {
+                indexes.push(i);
+            }
+        }
+
+        if indexes.len() > 1 {
+            let title_find = return_map
+                .iter()
+                .position(|r| r.title.contains(&course_desc.title));
+
+            let index_to_set = if let Some(index) = title_find {
+                index
+            } else {
+                indexes.remove(0)
+            };
             
-            if return_map[found.unwrap()].source == School::NA {
-                return_map[found.unwrap()].currently_offered = course_desc.currently_offered;
-                return_map[found.unwrap()].source = course_desc.source;
+            if return_map[index_to_set].source == School::NA {
+                return_map[index_to_set].currently_offered = course_desc.currently_offered;
+                return_map[index_to_set].source = course_desc.source;
             }
 
-            if return_map[found.unwrap()].description.len() < course_desc.description.len() {
-                return_map[found.unwrap()].description = course_desc.description;
+            if return_map[index_to_set].description.len() < course_desc.description.len() {
+                return_map[index_to_set].description = course_desc.description;
             }
-
+            
         } else {
             return_map.push(course_desc);
         }
@@ -586,6 +608,10 @@ pub fn merge_description_and_courses(
 
             desc.set_instructors(new_course.get_instructors());
             desc.set_offered();
+
+            if desc.get_source() == &School::NA {
+                desc.set_source(new_course.get_school().unwrap_or(School::NA));
+            }
 
             if desc.credits == 0 {
                 desc.credits = new_course.get_credits().clone();

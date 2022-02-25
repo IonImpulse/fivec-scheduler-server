@@ -1,19 +1,13 @@
 use crate::database::*;
 use crate::http::Method;
-use crate::locations::*;
 use crate::scrape_descriptions::*;
 use ::serde::*;
 use chrono::*;
-use rand::{thread_rng, Rng};
 use regex::Regex;
 use reqwest::header::*;
 use reqwest::*;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fs::OpenOptions;
-use std::io::{Error, Read, Write};
-use std::{thread, time};
-use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
 
 const SCHEDULE_API_URL: &str = "https://webapps.cmc.edu/course-search/search.php?";
 
@@ -445,7 +439,11 @@ pub fn convert_course_code_to_identifier(code: &str) -> String {
     let code = &other[..split_point];
     let id = &other[split_point..];
 
-    format!("{}-{}-{}-{}", code, id, dept, section)
+    if section == "" {
+        format!("{}-{}-{}", code, id, dept)
+    } else {
+        format!("{}-{}-{}-{}", code, id, dept, section)    
+    }
 }
 
 pub fn get_rows_clean(raw_text: &String) -> Option<Vec<String>> {
@@ -941,9 +939,9 @@ pub async fn test_full_update() {
 
      */
 
-    // let mut all_descriptions = scrape_all_descriptions().await.unwrap();
+    let mut all_descriptions = scrape_all_descriptions().await.unwrap();
 
-    let mut all_descriptions = load_descriptions_database().unwrap();
+    //let mut all_descriptions = load_descriptions_database().unwrap();
 
     let all_descriptions = find_reqs(&mut all_descriptions);
 
