@@ -555,9 +555,9 @@ pub fn convert_courses_to_descs(courses: Vec<PartialPomCourse>) -> Vec<CourseDes
 
 pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     info!("Scraping Pomona API for current courses");
-    let courses = full_pomona_update().await.unwrap();
+    //let courses = full_pomona_update().await.unwrap();
 
-    let converted_courses = convert_courses_to_descs(courses);
+    //let converted_courses = convert_courses_to_descs(courses);
 
     info!("Scraping HMC descriptions");
     let hmc_courses = scrape_url(hmc_url, HarveyMudd).await?;
@@ -571,7 +571,7 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
     let pomona_courses = scrape_url(pomona_url, Pomona).await?;
 
     let mut all_descs = merge_descriptions(vec![
-        converted_courses,
+        //converted_courses,
         hmc_courses,
         cmc_courses,
         pomona_courses,
