@@ -579,7 +579,13 @@ pub async fn scrape_all_descriptions() -> Result<Vec<CourseDescription>> {
         pitzer_courses,
     ]);
 
-    Ok(find_reqs(&mut all_descs))
+    // Find prerequisites and corequisites
+    all_descs = find_reqs(&mut all_descs);
+    
+    // Find fees
+    all_descs = find_fees(&mut all_descs);
+
+    Ok(all_descs)
 }
 
 pub fn merge_description_and_courses(
