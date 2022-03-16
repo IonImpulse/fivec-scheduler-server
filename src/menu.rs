@@ -34,6 +34,34 @@ struct Menu {
     stations: Vec<Station>,
     lat: u64, // Multiplied by 1e7
     long: u64, // Multiplied by 1e7
+    notes: String,
+}
+
+impl Menu {
+    pub fn create_base_menu(date: String, description: String, lat: u64, long: u64) -> Self {
+        Self {
+            date,
+            description,
+            time_slot: MenuTime::NA,
+            time_opens: "".to_string(),
+            time_closes: "".to_string(),
+            stations: Vec::new(),
+            lat,
+            long,
+            notes: "".to_string(),
+        }
+    }
+
+    pub fn create_seven_base_menus(date: &NaiveDate, description: String, lat: u64, long: u64) -> Vec<Self> {
+        let mut menus: Vec<Self> = Vec::new();
+        for _ in 0..7 {
+            let menu = Self::create_base_menu(date.format("%Y-%m-%d").to_string(), description.clone(), lat, long);
+            menus.push(menu);
+            // Increment date
+            date = &date.succ();
+        }
+        menus
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,6 +115,7 @@ enum MenuTime {
     Brunch,
     Night,
     Day,
+    NA,
 }
 
 /*
@@ -164,19 +193,53 @@ pub async fn get_pitzer_menus(start_date: NaiveDate, days_to_get: u32) -> Result
 
     // Get McConnell
     info!("Getting menus for McConnell");
-    let mcconnell_menu = get_cafebonappetit_menu(mcconnell).await?;
+    let mcconnell_menu = get_seven_day_cafebonappetit_menu(mcconnell, &start_date).await?;
 
     Ok(menus)
 }
 
-pub async fn get_cafebonappetit_menu(menu_id: &str, date: &str) -> Result<Menu, Box<dyn std::error::Error>> {
-    const base_url: &str = "https://legacy.cafebonappetit.com/api/2/cafes?cafe=";
-
-    let url = format!("{}{}&date={}", base_url, menu_id, date);
+pub async fn get_seven_day_cafebonappetit_menu(menu_id: &str, start_date: &NaiveDate) -> Result<Vec<Menu>, Box<dyn std::error::Error>> {
+    let url = format!("https://legacy.cafebonappetit.com/api/2/cafes?cafe={}&date={}", menu_id, start_date);
 
     let response = reqwest_get_ignore_ssl(&url).await?;
 
-    let json = response.json().await?;
+    let json: serde_json::Value = response.json().await?;
 
-    let description = json["description"].as_str().unwrap();
+    // Now, start getting the menu
+    let description = json.get("description").ok_or("")?.to_string();
+    
+    let lat = (json.get("latitude").ok_or("")?.as_f64().ok_or("")? * 1000000.0) as u64;
+    let long = (json.get("longitude").ok_or("")?.as_f64().ok_or("")? * 1000000.0) as u64;
+
+    // Create the base seven menus
+    let mut menus = Menu::create_seven_base_menus(start_date, description, lat, long);
+
+    // Create url to build request off of
+    let mut url = format!("https://legacy.cafebonappetit.com/api/2/menus?cafe={}&date=", menu_id);
+
+    // Get the menu for each day
+    for _ in 0..7 {
+        let str_date = start_date.format("%Y-%m-%d").to_string();
+        url = format!("{}{},", url, str_date);
+        start_date.succ();
+    }
+
+    // Remove the last comma
+    url.pop();
+
+    // Get the menu
+    let response = reqwest_get_ignore_ssl(&url).await?;
+
+    let json: serde_json::Value = response.json().await?;
+
+    // Get items to map off of
+    let items = json.get("items").ok_or("")?;
+
+    // Get the menu for each day
+    for i in 0..7 {
+        
+    }
+
+
+    Ok(menus)
 }
