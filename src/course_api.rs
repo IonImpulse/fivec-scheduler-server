@@ -206,6 +206,7 @@ pub struct Course {
     corequisites: String,
     offered: String,
     perm_count: u64,
+    fee: u64,
 }
 
 impl Course {
@@ -326,6 +327,14 @@ impl Course {
 
     pub fn get_corequisites(&self) -> String {
         self.corequisites.clone()
+    }
+
+    pub fn set_fee(&mut self, fee: u64) {
+        self.fee = fee
+    }
+
+    pub fn get_fee(&self) -> u64 {
+        self.fee
     }
 
     pub fn format_reqs(rec: String) -> String {
@@ -683,6 +692,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         corequisites: "".to_string(),
         offered: "".to_string(),
         perm_count: 0,
+        fee: 0,
     }
 }
 

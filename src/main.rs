@@ -19,6 +19,7 @@ mod routes;
 mod scrape_descriptions;
 mod compute_timings;
 mod locations;
+mod menu;
 
 use course_api::*;
 use database::*;
@@ -26,6 +27,7 @@ use routes::*;
 use scrape_descriptions::*;
 use compute_timings::*;
 use locations::*;
+use menu::*;
 
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
@@ -207,7 +209,7 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    // est_full_update().await;
+    test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
     lock.course_cache = load_course_database().unwrap();

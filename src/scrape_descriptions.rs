@@ -46,6 +46,7 @@ pub struct CourseDescription {
     pub prerequisites: String,
     pub corequisites: String,
     pub currently_offered: bool,
+    pub fee: u64,
 }
 
 impl CourseDescription {
@@ -72,6 +73,7 @@ impl CourseDescription {
             prerequisites,
             corequisites,
             currently_offered,
+            fee: 0,
         }
     }
 
@@ -89,6 +91,14 @@ impl CourseDescription {
 
     pub fn get_source(&self) -> &School {
         &self.source
+    }
+
+    pub fn set_fee(&mut self, fee: u64) {
+        self.fee = fee;
+    }
+
+    pub fn get_fee(&self) -> u64 {
+        self.fee
     }
 }
 
@@ -117,12 +127,28 @@ pub fn pitzer_url(page_num: u64) -> String {
     format!("https://catalog.pitzer.edu/content.php?filter[27]=-1&filter[29]=&filter[course_type]=-1&filter[keyword]=&filter[32]=1&filter[cpage]={}&cur_cat_oid=17&expand=1&navoid=1376&print=1&filter[exact_match]=1#acalog_template_course_filter", page_num)
 }
 
-pub fn between(str: &str, start: &str, end: &str) -> String {
-    let start_pos = &str[str.find(start).unwrap() + start.len()..];
+pub fn between(source: &str, start: &str, end: &str) -> String {
+    let start_pos = &source[source.find(start).unwrap() + start.len()..];
 
     start_pos[..start_pos.find(end).unwrap_or(start_pos.len())]
         .trim()
         .to_string()
+}
+
+pub fn between_multiple(source: &str, start: &str, end: Vec<&str>) -> String {
+    let start_pos = &source[source.find(start).unwrap() + start.len()..];
+
+    let mut end_pos = start_pos.len();
+
+    for e in end {
+        let end_pos_temp = start_pos.find(e).unwrap_or(start_pos.len());
+
+        if end_pos_temp < end_pos {
+            end_pos = end_pos_temp;
+        }
+    }
+
+    start_pos[..end_pos].trim().to_string()
 }
 
 pub fn extract_description(html: String, style: School) -> Result<Vec<CourseDescription>> {
@@ -532,6 +558,23 @@ pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
     descs.to_vec()
 }
 
+pub fn find_fees(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
+    for mut desc in descs.iter_mut() {
+        if desc.description.contains("$") {
+            // find the first $
+            let fee = between_multiple(&desc.description, "$", vec![" ", ".", ","]);
+
+            let parsed_fee = fee.parse::<u64>();
+
+            if parsed_fee.is_ok() {
+                desc.set_fee(parsed_fee.unwrap());
+            }
+        }
+    }
+
+    descs.to_vec()
+}
+
 pub fn convert_courses_to_descs(courses: Vec<PartialPomCourse>) -> Vec<CourseDescription> {
     let mut return_vec = Vec::new();
 
@@ -547,6 +590,7 @@ pub fn convert_courses_to_descs(courses: Vec<PartialPomCourse>) -> Vec<CourseDes
             currently_offered: true,
             prerequisites: String::new(),
             corequisites: String::new(),
+            fee: 0,
         })
     }
 
@@ -626,6 +670,7 @@ pub fn merge_description_and_courses(
             new_course.set_description(desc.description.clone());
             new_course.set_prerequisites(desc.prerequisites.clone());
             new_course.set_corequisites(desc.corequisites.clone());
+            new_course.set_fee(desc.fee.clone());
 
             descs_vec[index] = desc;
         }
@@ -639,9 +684,29 @@ pub fn merge_description_and_courses(
         .filter(|x| x.get_description().len() > 1)
         .count();
     println!(
-        "{}/{} courses have descriptions!",
+        "{}/{} courses have descriptions, out of {} catalog entries!",
         total_added_descs,
-        courses_vec.len()
+        courses_vec.len(),
+        descs_vec.len()
+    );
+
+    // Print number of courses & catalog entries with fees
+    let course_fees = courses_vec
+        .clone()
+        .into_iter()
+        .filter(|x| x.get_fee() > 0)
+        .count();
+    
+    let catalog_fees = descs_vec
+        .clone()
+        .into_iter()
+        .filter(|x| x.get_fee() > 0)
+        .count();
+    
+    println!(
+        "{} courses and {} catalog entries have fees!",
+        course_fees,
+        catalog_fees
     );
 
     // Get reqs from notes
