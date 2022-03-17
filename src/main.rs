@@ -209,6 +209,7 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
+    test_menu_update().await;
     test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;

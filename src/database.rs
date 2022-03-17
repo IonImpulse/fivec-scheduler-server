@@ -1,4 +1,5 @@
 use crate::course_api::*;
+use crate::menu::SchoolMenu;
 use crate::scrape_descriptions::*;
 use bimap::*;
 use std::fs::OpenOptions;
@@ -12,6 +13,7 @@ const COURSE_DATABASE_NAME: &str = "./course_cache.json";
 const CODE_DATA_NAME: &str = "./code_data.json";
 const LOCATION_NAME: &str = "./locations.json";
 const DESCRIPTION_NAME: &str = "./descriptions.json";
+const MENU_DATABASE_NAME: &str = "./menu_cache.json";
 
 const POSSIBLE_CODE_CHARS: &'static [char] = &[
     '2', '3', '4', '6', '7', '9', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'P', 'A', 'D', 'F', 'G', 'H',
@@ -112,6 +114,19 @@ pub fn save_descriptions_database(descriptions: Vec<CourseDescription>) -> Resul
         .open(DESCRIPTION_NAME)?;
 
     let serialized_output = serde_json::to_string(&descriptions).unwrap();
+
+    writer.write(serialized_output.as_bytes())?;
+
+    Ok(())
+}
+
+pub fn save_menu_datebase(menus: HashMap<School,SchoolMenu>) -> Result<(), Error> {
+    let mut writer = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(MENU_DATABASE_NAME)?;
+
+    let serialized_output = serde_json::to_string(&menus).unwrap();
 
     writer.write(serialized_output.as_bytes())?;
 

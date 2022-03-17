@@ -1,6 +1,7 @@
 use crate::database::*;
 use crate::http::Method;
 use crate::scrape_descriptions::*;
+use crate::menu::*;
 use ::serde::*;
 use chrono::*;
 use regex::Regex;
@@ -966,4 +967,12 @@ pub async fn test_full_update() {
     save_descriptions_database(descriptions.clone()).unwrap();
 
     assert_eq!(courses, load_course_database().unwrap())
+}
+
+pub async fn test_menu_update() {
+    let menus = get_seven_day_menus().await.unwrap();
+
+    // Save them to json
+    save_menu_datebase(menus.clone()).unwrap();
+
 }
