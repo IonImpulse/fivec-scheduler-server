@@ -120,8 +120,23 @@ pub fn save_descriptions_database(descriptions: Vec<CourseDescription>) -> Resul
     Ok(())
 }
 
-pub fn save_menu_datebase(menus: HashMap<School,SchoolMenu>) -> Result<(), Error> {
-    let mut writer = OpenOptions::new()
+pub fn load_menu_database() -> Result<HashMap<School, SchoolMenu>, Error> {
+    let file = OpenOptions::new().read(true).open(MENU_DATABASE_NAME);
+
+    if file.is_err() {
+        return Ok(HashMap::new());
+    } else {
+        let mut file = file.unwrap();
+
+        let mut data = String::new();
+        file.read_to_string(&mut data)?;
+        let menus: HashMap<School, SchoolMenu> = from_slice_lenient(&data.as_bytes()).unwrap();
+        Ok(menus)
+    }
+}
+
+pub fn save_menu_datebase(menus: HashMap<School, SchoolMenu>) -> Result<(), Error> {
+    let mut writer = OpenOptions::new() 
         .create(true)
         .write(true)
         .open(MENU_DATABASE_NAME)?;

@@ -31,6 +31,24 @@ lazy_static! {
     static ref RE_SPACES: Regex = Regex::new(r"\s+").unwrap();
 }
 
+pub fn pretty_parse_html(s: &str) -> String {
+    let s = RE_HTML.replace_all(s, "").to_string();
+    let s = s.replace("\\n", "");
+    let s = s.replace("\n", " ");
+    let s = s.replace("\\", "");
+    let s = s.replace("\"", "");
+    let s = s.replace(|c: char| !c.is_ascii(), " ");
+    let s = RE_SPACES.replace_all(&s, " ").to_string();
+
+    // Remove HTML entities
+    let f = match decode_html(&s) {
+        Err(_) => s,
+        Ok(s) => s,
+    };
+
+    f.trim().to_string()
+}
+
 // Simple pair that can be used to merge into actual course data
 // "Classic Title" refers to the college's way of identifying the course:
 // "ASAM126 HM" instead of "ASAM-126-HM-{section_num}"

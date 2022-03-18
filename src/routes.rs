@@ -172,3 +172,14 @@ pub async fn get_catalog_if_stale(path: web::Path<u64>) -> HttpResponse {
         HttpResponse::Ok().json("No update needed")
     }
 }
+
+#[get("/getMenus")]
+pub async fn get_menus(_path: web::Path<()>) -> HttpResponse {
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let menus = lock.menu_cache.clone();
+
+    drop(lock);
+
+    HttpResponse::Ok().json(menus)
+}

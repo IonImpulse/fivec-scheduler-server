@@ -35,6 +35,7 @@ pub struct MemDatabase {
     pub code_cache: BiHashMap<String, SharedCourseList>,
     pub locations_cache: HashMap<String, (String, String)>,
     pub descriptions_cache: Vec<CourseDescription>,
+    pub menu_cache: HashMap<School, SchoolMenu>,
     pub term: String,
     pub ten_minute_log: Vec<Instant>,
 }
@@ -47,6 +48,7 @@ impl MemDatabase {
             code_cache: BiHashMap::new(),
             locations_cache: HashMap::new(),
             descriptions_cache: Vec::new(),
+            menu_cache: HashMap::new(),
             term: "".to_string(),
             ten_minute_log: Vec::new(),
         }
@@ -203,7 +205,7 @@ async fn update_loop() -> std::io::Result<()> {
     }
 }
 
-/// Main function to run both actix_web server adn API update loop
+/// Main function to run both actix_web server and API update loop
 /// API update loops lives inside a tokio thread while the actix_web
 /// server is run in the main thread and blocks until done.
 async fn async_main() -> std::io::Result<()> {
@@ -217,6 +219,7 @@ async fn async_main() -> std::io::Result<()> {
     lock.code_cache = load_code_database().unwrap();
     lock.locations_cache = load_locations_database().unwrap();
     lock.descriptions_cache = load_descriptions_database().unwrap();
+    lock.menu_cache = load_menu_database().unwrap();
     drop(lock);
 
     info!("Database(s) loaded!");
@@ -253,6 +256,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(get_status)
             .service(get_full_year_catalog)
             .service(get_catalog_if_stale)
+            .service(get_menus)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()
