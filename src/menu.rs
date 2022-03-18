@@ -498,7 +498,16 @@ const FRANK: &str = "https://my.pomona.edu/eatec/Frank.json";
 const FRARY: &str = "https://my.pomona.edu/eatec/Frary.json";
 const OLDENBORG: &str = "https://my.pomona.edu/eatec/Oldenborg.json";
 
-pub async fn get_seven_day_menus() -> Result<HashMap<School, SchoolMenu>, Box<dyn std::error::Error>>
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MenuError {
+    InvalidDate,
+    InvalidCafe,
+    ErrorFetchingURL,
+    ErrorParsingJSON,
+    ErrorParsingMenu,
+}
+
+pub async fn get_seven_day_menus() -> Result<HashMap<School, SchoolMenu>, MenuError>
 {
     let today = Local::today().naive_local();
 
@@ -536,7 +545,7 @@ pub async fn get_seven_day_menus() -> Result<HashMap<School, SchoolMenu>, Box<dy
 pub async fn get_hmc_menus(
     start_date: NaiveDate,
     days_to_get: usize,
-) -> Result<SchoolMenu, Box<dyn std::error::Error>> {
+) -> Result<SchoolMenu, MenuError> {
     let mut school_menu = SchoolMenu::new(HarveyMudd);
 
     // Get Hoch
@@ -564,7 +573,7 @@ pub async fn get_hmc_menus(
 pub async fn get_pitzer_menus(
     start_date: NaiveDate,
     days_to_get: usize,
-) -> Result<SchoolMenu, Box<dyn std::error::Error>> {
+) -> Result<SchoolMenu, MenuError> {
     let mut school_menu = SchoolMenu::new(Pitzer);
 
     // Get McConnell
@@ -592,7 +601,7 @@ pub async fn get_pitzer_menus(
 pub async fn get_scripps_menus(
     start_date: NaiveDate,
     days_to_get: usize,
-) -> Result<SchoolMenu, Box<dyn std::error::Error>> {
+) -> Result<SchoolMenu, MenuError> {
     let mut school_menu = SchoolMenu::new(Scripps);
 
     // Get Mallot
@@ -610,7 +619,7 @@ pub async fn get_scripps_menus(
 pub async fn get_cmc_menus(
     start_date: NaiveDate,
     days_to_get: usize,
-) -> Result<SchoolMenu, Box<dyn std::error::Error>> {
+) -> Result<SchoolMenu, MenuError> {
     let mut school_menu = SchoolMenu::new(ClaremontMckenna);
 
     // Get Collins
@@ -635,7 +644,7 @@ pub async fn get_cmc_menus(
 }
 
 
-pub async fn get_pomona_menus(start_date: NaiveDate, days_to_get: usize) -> Result<SchoolMenu, Box<dyn std::error::Error>> {
+pub async fn get_pomona_menus(start_date: NaiveDate, days_to_get: usize) -> Result<SchoolMenu, MenuError> {
     let mut school_menu = SchoolMenu::new(Pomona);
 
     // Get Frank
@@ -673,15 +682,28 @@ pub async fn get_cafebonappetit_menus(
     num_days: usize,
     menu_id: &str,
     start_date: &NaiveDate,
-) -> Result<(Vec<DayMenu>, Vec<Meal>), Box<dyn std::error::Error>> {
+) -> Result<(Vec<DayMenu>, Vec<Meal>), MenuError> {
     let url = format!(
         "https://legacy.cafebonappetit.com/api/2/cafes?cafe={}&date={}",
         menu_id, start_date
     );
 
-    let response = reqwest_get_ignore_ssl(&url).await?;
+    let response = reqwest_get_ignore_ssl(&url).await;
 
-    let json: serde_json::Value = response.json().await?;
+    if let Err(e) = response {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let response = response.unwrap();
+
+    let json = response.json().await;
+
+    if let Err(e) = json {
+        return Err(MenuError::ErrorParsingJSON);
+    }
+
+    let json: serde_json::Value = json.unwrap();
+
     let json = json["cafes"][menu_id].clone();
 
     // Now, start getting the menu
@@ -721,9 +743,21 @@ pub async fn get_cafebonappetit_menus(
     url.pop();
 
     // Get the menu
-    let response = reqwest_get_ignore_ssl(&url).await?;
+    let response = reqwest_get_ignore_ssl(&url).await;
 
-    let json: serde_json::Value = response.json().await?;
+    if let Err(e) = response {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let response = response.unwrap();
+
+    let json = response.json().await;
+
+    if let Err(e) = json {
+        return Err(MenuError::ErrorParsingJSON);
+    }
+
+    let json: serde_json::Value = json.unwrap();
 
     // Get items to map off of
     let items = json.get("items").unwrap().as_object().unwrap();
@@ -831,7 +865,7 @@ pub async fn get_sodexomyway_menus(
     start_date: &NaiveDate,
     lat: u64,
     long: u64,
-) -> Result<(Vec<DayMenu>, Vec<Meal>), Box<dyn std::error::Error>> {
+) -> Result<(Vec<DayMenu>, Vec<Meal>), MenuError> {
     let first_half = format!("{}&startDate={}", menu_url, start_date.format("%m/%d/%Y"));
 
     let mut new_start = start_date.clone().succ();
@@ -843,13 +877,35 @@ pub async fn get_sodexomyway_menus(
     let second_half = format!("{}&startDate={}", menu_url, new_start.format("%m/%d/%Y"));
 
     // Get both urls
-    let first_response = reqwest_get_ignore_ssl(&first_half).await?;
-    let second_response = reqwest_get_ignore_ssl(&second_half).await?;
+    let first_response = reqwest_get_ignore_ssl(&first_half).await;
+    let second_response = reqwest_get_ignore_ssl(&second_half).await;
+
+    if let Err(e) = first_response {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    if let Err(e) = second_response {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let first_response = first_response.unwrap();
+    let second_response = second_response.unwrap();
 
     // Find line starting with "var nd = ["
-    let first_text = first_response.text().await?;
-    let second_text = second_response.text().await?;
+    let first_text = first_response.text().await;
+    let second_text = second_response.text().await;
 
+    if let Err(e) = first_text {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    if let Err(e) = second_text {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let first_text = first_text.unwrap();
+    let second_text = second_text.unwrap();
+    
     let mut first_var = first_text
         .split("\n")
         .find(|line| line.starts_with("<div id='nutData' data-schools='False' class='hide'>"))
@@ -986,7 +1042,7 @@ pub async fn get_sodexomyway_menus(
 /// so we cannot request a certain day/week of menus. Instead,
 /// we just discard anything before the first menu that matches
 /// the given start date.
-pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveDate) -> Result<(Vec<DayMenu>, Vec<Meal>), Box<dyn std::error::Error>> {
+pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveDate) -> Result<(Vec<DayMenu>, Vec<Meal>), MenuError> {
     let mut end_date = start_date.clone();
 
     for _ in 0..num_days {
@@ -994,9 +1050,21 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
     }
 
     // Get the json
-    let mut response = reqwest_get_ignore_ssl(menu_url).await?;
+    let response = reqwest_get_ignore_ssl(menu_url).await;
 
-    let mut text = response.text().await?;
+    if response.is_err() {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let response = response.unwrap();
+
+    let text = response.text().await;
+
+    if text.is_err() {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let mut text = text.unwrap();
 
     // Remove the "/**/ menuData("
     text = text.replace("/**/ menuData(", "");
