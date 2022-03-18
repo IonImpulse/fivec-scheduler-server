@@ -168,7 +168,6 @@ impl Menu {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-
 pub struct Station {
     name: String,
     notes: String,
@@ -182,6 +181,10 @@ impl Station {
             notes,
             meals: Vec::new(),
         }
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
     }
 
     pub fn add_meals(&mut self, meals: Vec<Meal>) {
@@ -653,6 +656,15 @@ pub async fn get_pomona_menus(start_date: NaiveDate, days_to_get: usize) -> Resu
 
     school_menu.add_cafe(frary_cafe);
 
+    // Get Oldenborg
+    info!("Getting menus for Oldenborg");
+    let mut oldenborg_cafe: Cafe = Cafe::new("Oldenborg Dining Hall".to_string(), "".to_string());
+    let (menus, to_go_meals) = get_eatec_menu(days_to_get, OLDENBORG, &start_date).await?;
+    oldenborg_cafe.add_menus(menus);
+    oldenborg_cafe.add_to_go_meals(to_go_meals);
+
+    school_menu.add_cafe(oldenborg_cafe);
+
     Ok(school_menu)
 }
 
@@ -1011,9 +1023,7 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
     ).unwrap_or(json_menu.len());
 
 
-    // Remove days that it's closed
-    let mut json_menu_final = json_menu[start_index..end_index].to_vec();
-    json_menu_final = json_menu_final.iter().filter(|x| x["@mealperiodname"].as_str().unwrap() != "Closed").map(|x| x.clone()).collect();
+    let json_menu_final = json_menu[start_index..end_index].to_vec();
 
     // Now onto the days
     let mut current_date = start_date.clone();
@@ -1024,6 +1034,19 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
     let mut menu: Menu = Menu::create_base_menu(current_date.format("%Y-%m-%d").to_string(), "".to_string(), 0, 0);
 
     for json_station in &json_menu_final {
+        // If it's closed, skip the day
+        if json_station["@mealperiodname"].as_str().unwrap() == "Closed" {
+            current_date = current_date.succ();
+
+            day_menu = DayMenu::new(current_date.format("%Y-%m-%d").to_string());
+            menu = Menu::create_base_menu(current_date.format("%Y-%m-%d").to_string(), "".to_string(), 0, 0);
+
+            println!("Closed on {}", current_date.format("%Y-%m-%d"));
+            println!("{:?}", json_station);
+
+            continue;
+        }
+
         let recipes: Vec<Value> = json_station["recipes"]["recipe"].as_array().unwrap_or(
             {
                 let mut empty_vec: Vec<Value> = Vec::new();
@@ -1039,6 +1062,10 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
         let station_notes = recipes[0]["@description"].as_str().unwrap();
 
         let mut station = Station::new(station_name.to_string(), station_notes.to_string());
+
+        // Set name
+        let name = recipes[0]["@category"].as_str().unwrap();
+        station.set_name(name.to_string());
 
         // Add the meals
         station.add_meals(Meal::from_eatec_recipes(&recipes));
@@ -1059,16 +1086,22 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
             menu = Menu::create_base_menu(current_date.format("%Y-%m-%d").to_string(), "".to_string(), 0, 0);
 
         } else if json_station["@mealperiodname"].as_str().unwrap() != current_station {
-            day_menu.add_menu(menu);
+            if menu.time_slot != MenuTime::NA {
+                day_menu.add_menu(menu);
+            }
 
             current_station = json_station["@mealperiodname"].as_str().unwrap();
 
             menu = Menu::create_base_menu(current_date.format("%Y-%m-%d").to_string(), "".to_string(), 0, 0);
         }
 
+        menu.parse_set_timeslot(current_station);
         menu.add_station(station);
-
     }
+
+    // Add the last menu
+    day_menu.add_menu(menu);
+    menus.push(day_menu);
 
     Ok((menus, Vec::new()))
 }
