@@ -144,7 +144,7 @@ impl Menu {
             "breakfast" => self.time_slot = MenuTime::Breakfast,
             "lunch" => self.time_slot = MenuTime::Lunch,
             "dinner" => self.time_slot = MenuTime::Dinner,
-            "brunch" => self.time_slot = MenuTime::Brunch,
+            "brunch" | "continuous dining am" => self.time_slot = MenuTime::Brunch,
             "late night" | "night" => self.time_slot = MenuTime::Night,
             _ => self.time_slot = MenuTime::NA,
         }
