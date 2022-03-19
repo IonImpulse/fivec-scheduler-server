@@ -995,8 +995,8 @@ pub async fn get_sodexomyway_menus(
 
             let first_meal = stations[0]["menuItems"].as_array().unwrap()[0].clone();
 
-            new_menu.set_start_time(first_meal["startTime"].as_str().unwrap().split("T").next().unwrap());
-            new_menu.set_end_time(first_meal["endTime"].as_str().unwrap().split("T").next().unwrap());
+            new_menu.set_start_time(first_meal["startTime"].as_str().unwrap().split("T").nth(1).unwrap());
+            new_menu.set_end_time(first_meal["endTime"].as_str().unwrap().split("T").nth(1).unwrap());
 
             for station in stations {
                 let name = station["courseName"].as_str().unwrap().to_string();
