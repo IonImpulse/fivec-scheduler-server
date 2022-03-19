@@ -322,6 +322,8 @@ impl DietaryOption {
             let without = value_str.contains("without");
 
             let dietary_option = DietaryOption::new(food, !without);
+
+            dietary_options.push(dietary_option);
         }
 
         dietary_options
@@ -337,6 +339,10 @@ impl DietaryOption {
             let contains = contains == "true";
 
             let food = FoodIngredient::parse_from_sodexomyway(name);
+
+            let dietary_option = DietaryOption::new(food, contains);
+
+            dietary_options.push(dietary_option);
         }
 
         dietary_options
@@ -352,6 +358,10 @@ impl DietaryOption {
             let contains = contains == "Yes";
 
             let food = FoodIngredient::parse_from_eatec(name);
+
+            let dietary_option = DietaryOption::new(food, contains);
+
+            dietary_options.push(dietary_option);
         }
 
         dietary_options
@@ -985,8 +995,8 @@ pub async fn get_sodexomyway_menus(
 
             let first_meal = stations[0]["menuItems"].as_array().unwrap()[0].clone();
 
-            new_menu.set_start_time(first_meal["startTime"].as_str().unwrap());
-            new_menu.set_end_time(first_meal["endTime"].as_str().unwrap());
+            new_menu.set_start_time(first_meal["startTime"].as_str().unwrap().split("T").next().unwrap());
+            new_menu.set_end_time(first_meal["endTime"].as_str().unwrap().split("T").next().unwrap());
 
             for station in stations {
                 let name = station["courseName"].as_str().unwrap().to_string();
