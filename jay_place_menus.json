@@ -1,0 +1,155 @@
+[
+    [],
+    [
+        {
+            "name": "Bacon",
+            "notes": "Bacon (Lay flat)/Cooked/Hotel Pan",
+            "dietary_options": [],
+            "cost": null
+        },
+        {
+            "name": "Hot Pretzel w/ Cheese",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 175
+        },
+        {
+            "name": "Cheese Pizza",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 240
+        },
+        {
+            "name": "Jalapeno Cheese Pretzel",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 240
+        },
+        {
+            "name": "Quesadilla w/Salsa",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 225
+        },
+        {
+            "name": "Quesadilla w/Chicken",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 315
+        },
+        {
+            "name": "Buffalo Wings",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 335
+        },
+        {
+            "name": "Eggrolls",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 230
+        },
+        {
+            "name": "Bavarian Cream Churro",
+            "notes": "",
+            "dietary_options": [],
+            "cost": 195
+        },
+        {
+            "name": "Caramel Churro",
+            "notes": "",
+            "dietary_options": [],
+            "cost":195
+        },
+        {
+            "name": "Pizza Rolls - Cheese",
+            "notes": "",
+            "dietary_options": [],
+            "cost":175
+        },
+        {
+            "name": "Pizza Rolls - Pepperoni",
+            "notes": "",
+            "dietary_options": [],
+            "cost":175
+        },
+        {
+            "name": "The Galileo",
+            "notes": "Ham, Pepperoni, Salami, & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Aristotle",
+            "notes": "Ham & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Issac Newton",
+            "notes": "Meatballs, Sauce, & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "The JP (Joe Platt)",
+            "notes": "Ham & Turkey Club w/Bacon",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Ben Franklin",
+            "notes": "Roast Beef, Turkey, Ham, & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Einstein",
+            "notes": "Roast Beef & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Copernicus",
+            "notes": "Turkey & Cheese",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "Amelia Earhart",
+            "notes": "Provalone, Bell Peppers, Mushrooms, Onions, Tomatoes, & Olives",
+            "dietary_options": [],
+            "cost":450
+        },
+        {
+            "name": "The Philly",
+            "notes": "Steak, Bell Peppers, Onions, & Cheese",
+            "dietary_options": [],
+            "cost":485
+        },
+        {
+            "name": "Whole Cheese Pizza",
+            "notes": "Each additional topping $1.40",
+            "dietary_options": [],
+            "cost":840
+        },
+        {
+            "name": "Slice of Pizza - Cheese",
+            "notes": "",
+            "dietary_options": [],
+            "cost":210
+        },
+        {
+            "name": "Slice of Pizza - Pepperoni",
+            "notes": "",
+            "dietary_options": [],
+            "cost":265
+        },
+        {
+            "name": "Pizza Bread",
+            "notes": "",
+            "dietary_options": [],
+            "cost":420
+        }
+    ]
+]

@@ -3,6 +3,9 @@ use crate::reqwest_get_ignore_ssl;
 use crate::scrape_descriptions::*;
 use crate::School::*;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
 
 use ::serde::*;
 use chrono::*;
@@ -576,6 +579,18 @@ pub async fn get_hmc_menus(
     // Get Jay's Place
     info!("Getting menus for Jay's Place");
     let mut jays_place: Cafe = Cafe::new("Jay's Place".to_string(), "".to_string());
+    // Have to manually create a to-go item list
+    // from a json file
+    let (menus, to_go_meals) = get_json_file_menus(
+        "jay_place_menus.json",
+        (34.1057862 * 1_000_000_f64) as u64,
+        (-117.7098119 * 1_000_000_f64) as u64,
+    ).unwrap();
+
+    jays_place.add_menus(menus);
+    jays_place.add_to_go_meals(to_go_meals);
+
+    school_menu.add_cafe(jays_place);
 
     Ok(school_menu)
 }
@@ -886,6 +901,9 @@ pub async fn get_sodexomyway_menus(
 
     let second_half = format!("{}&startDate={}", menu_url, new_start.format("%m/%d/%Y"));
 
+    println!("{}", first_half);
+    println!("{}", second_half);
+
     // Get both urls
     let first_response = reqwest_get_ignore_ssl(&first_half).await;
     let second_response = reqwest_get_ignore_ssl(&second_half).await;
@@ -1182,4 +1200,24 @@ pub async fn get_eatec_menu(num_days: usize, menu_url: &str, start_date: &NaiveD
     menus.push(day_menu);
 
     Ok((menus, Vec::new()))
+}
+
+pub fn get_json_file_menus(file_path: &str, lat: u64, long: u64) -> Result<(Vec<DayMenu>, Vec<Meal>), MenuError> {
+    let file = File::open(file_path);
+
+    if file.is_err() {
+        return Err(MenuError::ErrorFetchingURL);
+    }
+
+    let file = file.unwrap();
+
+    let mut reader = BufReader::new(file);
+
+    let mut contents = String::new();
+
+    reader.read_to_string(&mut contents);
+
+    let json = serde_json::from_str::<(Vec<DayMenu>, Vec<Meal>)>(&contents).unwrap();
+
+    Ok(json)
 }
