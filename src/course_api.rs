@@ -371,6 +371,164 @@ impl Course {
     pub fn set_perm_count(&mut self, perm_count: u64) {
         self.perm_count = perm_count;
     }
+
+    pub fn new_from_pomona_api(pom: serde_json::Value) -> Course {
+        let course_code = pom["CourseCode"].as_str().unwrap().to_string();
+
+        let identifier = convert_course_code_to_identifier(&course_code);
+        
+        let identifier_split: Vec<&str> = identifier.split("-").collect();
+        println!("{}",identifier);
+
+        let title = pom["Name"].as_str().unwrap_or("").trim().to_string();
+
+        let description = pom["Description"].as_str().unwrap_or("").to_string();
+
+        let mut credits = (pom["Credits"].as_str().unwrap_or("").replace("\"","").parse::<f64>().unwrap_or(0.)) as u64 * 100;
+
+        let mut instrutors = Vec::new();
+
+        for instructor in pom["Instructors"].as_array().unwrap_or(&vec![]) {
+            let name = instructor["Name"].as_str().unwrap_or("").to_string();
+            // Rearrange the name to be in the format "First Last"
+            let split = name.split(",").collect::<Vec<&str>>();
+
+            let mut name = String::new();
+
+            if split.len() == 2 {
+                name = format!("{} {}", split[1].trim(), split[0].trim());
+            } else {
+                name = format!("{}", split[0].trim());
+            }
+
+            instrutors.push(name);
+        }
+
+        let perm_number = pom["PermCount"].as_str().unwrap_or("0").replace("\"","");
+
+        let perm_count = perm_number.parse::<u64>().unwrap_or(0);
+
+        let max_seats = pom["SeatsTotal"].as_str().unwrap_or("0").replace("\"","");
+        let max_seats = max_seats.parse::<i64>().unwrap_or(0);
+
+        let seats_taken = pom["SeatsFilled"].as_str().unwrap_or("0").replace("\"","");
+        let seats_taken = seats_taken.parse::<i64>().unwrap_or(0);
+
+        let seats_remaining = max_seats - seats_taken;
+
+
+         // Get status
+        let status: CourseStatus;
+        let pom_status = pom["CourseStatus"].as_str().unwrap_or("");
+
+        if pom_status == "Open" {
+            status = CourseStatus::Open;
+        } else if pom_status.contains("Closed") {
+            status = CourseStatus::Closed;
+        } else {
+            status = CourseStatus::Reopened;
+        }
+
+
+        let mut timing = Vec::new();
+
+        for time in pom["Schedules"].as_array().unwrap() {
+            let school = time["Campus"]
+                .as_str()
+                .unwrap_or("")
+                .split(" ")
+                .nth(0).unwrap_or("");
+
+            let school = School::new_from_string(school);
+
+            let building = time["Building"].as_str().unwrap_or("").to_string();
+            let meet_time = time["MeetTime"].as_str().unwrap_or("").to_string();
+
+            let times = meet_time.split(".").nth(0).unwrap_or("").split("-").collect::<Vec<&str>>();
+
+            println!("{:?}", times);
+            
+            let mut start_time = times.get(0).unwrap_or(&"12:00AM").to_string();
+            let end_time = times.get(1).unwrap_or(&"12:00AM").to_string();
+
+            if start_time.len() == 5 {
+                start_time = format!("{}{}", start_time, end_time[5..].to_string());
+            }
+
+            let start_time =
+            NaiveTime::parse_from_str(start_time.trim(), TIME_FMT)
+                .unwrap_or(NaiveTime::from_hms(0, 0, 0));
+
+            let end_time =
+            NaiveTime::parse_from_str(end_time.trim(), TIME_FMT)
+                .unwrap_or(NaiveTime::from_hms(0, 0, 0));
+
+            let days = time["Weekdays"].as_str().unwrap_or("").to_string();
+
+            let days: Vec<Day> = days
+                .chars()
+                .map(|c| Day::new_from_char(c))
+                .collect();
+
+            let mut room_building = meet_time.split_once(".").unwrap_or(("", meet_time.as_str())).1.to_string();
+            
+            if room_building.contains("(") {
+                room_building = room_building.split_once("(").unwrap().0.to_string();
+            }
+
+            let room = room_building.split_once("Room").unwrap_or(("", room_building.as_str())).1.trim().to_string();
+
+            let location = Location {
+                building,
+                room,
+                school,
+            };
+
+
+            let time = CourseTiming {
+                start_time,
+                end_time,
+                location,
+                days,
+            };
+
+            timing.push(time);
+        }
+
+
+        let credits_hmc: u64;
+
+        if pom["PrimaryAssociation"].as_str().unwrap_or("") == "HM" {
+            credits_hmc = credits;
+            credits = credits / 3;
+        } else {
+            credits_hmc = credits * 3;
+        }
+
+        Course {
+            identifier: identifier.clone(),
+            id: identifier_split[0].to_string(),
+            code: identifier_split[1].to_string(),
+            section: identifier_split[3].to_string(),
+            dept: pom["Department"].as_str().unwrap_or("").to_string(),
+            title,
+            description,
+            credits,
+            max_seats,
+            seats_taken,
+            seats_remaining,
+            timing,
+            instructors: instrutors,
+            prerequisites: String::new(),
+            corequisites: String::new(),
+            fee: 0,
+            perm_count,
+            notes: String::new(),
+            status,
+            offered: "".to_string(),
+            credits_hmc,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -391,8 +549,6 @@ impl PartialPomCourse {
 
         let identifier = convert_course_code_to_identifier(&course_code);
 
-        println!("{}",identifier);
-
         let title = pom["Name"].as_str().unwrap_or("").trim().to_string();
 
         let description = pom["Description"].as_str().unwrap_or("").to_string();
@@ -400,7 +556,7 @@ impl PartialPomCourse {
         let credits = (pom["Credits"].as_str().unwrap_or("").replace("\"","").parse::<f64>().unwrap_or(0.)) as u64 * 100;
 
         PartialPomCourse {
-            course_code: pom["CourseCode"].to_string(),
+            course_code,
             identifier,
             title,
             description,
@@ -757,7 +913,7 @@ pub struct CourseArea {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Term {
-    Description: String,
+    pub Description: String,
     pub Key: String,
     Session: String,
     SubSession: String,
@@ -841,16 +997,14 @@ pub async fn get_perm_numbers(term_key: &str) -> std::result::Result<HashMap<Str
 pub async fn get_pom_courses(
     areas: Vec<CourseArea>,
     term: Term,
-) -> std::result::Result<Vec<PartialPomCourse>, Box<dyn std::error::Error>> {
+) -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
 
     // Get data from POM API
     let client = reqwest::Client::new();
 
-    let mut courses: Vec<PartialPomCourse> = Vec::new();
-
-    let all_courses = get_perm_numbers(&term.Key).await?;
+    let mut courses: Vec<Course> = Vec::new();
 
     for area in areas {
         println!("Getting courses for area {}", area.Code);
@@ -880,31 +1034,26 @@ pub async fn get_pom_courses(
         let courses_pom = courses_pom.as_array().unwrap();
         
         for course_pom in courses_pom {
-            let mut course = PartialPomCourse::new_from_area_pom(course_pom.clone());
-        
-            // Find matching course
-            course.perm_count = *all_courses.get(&course.identifier).unwrap_or(&0);
+            let mut course = Course::new_from_pomona_api(course_pom.clone());
     
             courses.push(course);
         }
-
-        
     }
 
     Ok(courses)
 }
 
-pub async fn full_pomona_update() -> std::result::Result<Vec<PartialPomCourse>, Box<dyn std::error::Error>> {
+pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
     // First, get the course areas from the API
-    let areas = get_areas().await?;
+    let areas = get_areas().await.unwrap();
 
     // Then, get the course terms
-    let terms = get_terms().await?;
+    let terms = get_terms().await.unwrap();
 
     // Then, get the courses for each area
-    let courses = get_pom_courses(areas, terms[0].clone()).await?;
+    let courses = get_pom_courses(areas, terms[0].clone()).await.unwrap();
 
-    Ok(courses)
+    Ok((terms[0].clone().Description, courses))
 }
 
 pub fn merge_perms_into_courses(courses: Vec<Course>, perm_hashmap: HashMap<String, u64>) -> Vec<Course> {
@@ -919,7 +1068,7 @@ pub fn merge_perms_into_courses(courses: Vec<Course>, perm_hashmap: HashMap<Stri
 }
 
 pub async fn test_full_update() {
-    let course_tuple = get_all_courses().await.unwrap();
+    let course_tuple = full_pomona_update().await.unwrap();
     println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;

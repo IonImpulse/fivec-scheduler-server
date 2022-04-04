@@ -95,7 +95,7 @@ async fn update_loop() -> std::io::Result<()> {
         info!("Starting schedule API update...");
 
         info!("Retrieving course info...");
-        let course_update = get_all_courses().await;
+        let course_update = full_pomona_update().await;
         
         info!("Retrieving terms...");
         let terms = get_terms().await.unwrap();
@@ -138,7 +138,6 @@ async fn update_loop() -> std::io::Result<()> {
 
                         let merged = merge_description_and_courses(final_course_update, course_desc_update.clone());
 
-                        final_course_update = merged.0;
                         let descriptions = merged.1;
 
                         save_descriptions_database(descriptions.clone()).unwrap();
@@ -239,7 +238,7 @@ async fn update_loop() -> std::io::Result<()> {
 async fn async_main() -> std::io::Result<()> {
     info!("Loading database(s)...");
     
-    test_menu_update().await;
+    //test_menu_update().await;
     //test_full_update().await;
     // Load databases if they exist
     let mut lock = MEMORY_DATABASE.lock().await;
