@@ -136,7 +136,7 @@ async fn update_loop() -> std::io::Result<()> {
                     if let Ok(course_desc_update) = course_desc_update {
                         number_of_repeated_errors = 0;
 
-                        let merged = merge_description_and_courses(final_course_update, course_desc_update.clone());
+                        let merged = merge_description_and_courses(final_course_update.clone(), course_desc_update.clone());
 
                         let descriptions = merged.1;
 
