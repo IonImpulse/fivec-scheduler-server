@@ -215,8 +215,8 @@ impl Course {
         format!("{}-{}-{}-{}", code, id, dept, section)
     }
 
-    pub fn get_identifier(&self) -> String {
-        format!("{}-{}-{}-{}", self.code, self.id, self.dept, self.section)
+    pub fn get_identifier(&self) -> &String {
+        &self.identifier
     }
 
     pub fn get_id(&self) -> &String {
@@ -1034,9 +1034,14 @@ pub async fn get_pom_courses(
         let courses_pom = courses_pom.as_array().unwrap();
         
         for course_pom in courses_pom {
-            let mut course = Course::new_from_pomona_api(course_pom.clone());
-    
-            courses.push(course);
+            let course = Course::new_from_pomona_api(course_pom.clone());
+            
+            // Don't push duplicates
+            if courses.iter().find(|x| x.get_identifier() == course.get_identifier()).is_none() {
+                courses.push(course);
+            } else {
+                println!("Duplicate course found: {}", course.get_identifier());
+            }
         }
     }
 
@@ -1058,7 +1063,7 @@ pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
 
 pub fn merge_perms_into_courses(courses: Vec<Course>, perm_hashmap: HashMap<String, u64>) -> Vec<Course> {
     let courses = courses.iter().map(|course| {
-        let perm_count = perm_hashmap.get(&course.get_identifier()).unwrap_or(&0);
+        let perm_count = perm_hashmap.get(course.get_identifier()).unwrap_or(&0);
         let mut new_course = course.clone();
         new_course.perm_count = *perm_count;
         new_course
