@@ -576,6 +576,36 @@ pub fn find_reqs(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
     descs.to_vec()
 }
 
+pub fn find_reqs_courses(courses: &mut Vec<Course>) -> Vec<Course> {
+    for mut desc in courses.iter_mut() {
+        // Check for prerequisites in description
+        if desc.get_description().contains("Prerequisite") {
+            let r = process_req(desc.get_description(), "Prerequisite".to_string());
+            desc.set_description(r.0);
+            desc.set_prerequisites(RE_SPACES.replace_all(&r.1, " ").to_string());
+        } else if desc.get_description().contains("Prereq") {
+            let r = process_req(desc.get_description(), "Prereq".to_string());
+            desc.set_description(r.0);
+            desc.set_prerequisites(RE_SPACES.replace_all(&r.1, " ").to_string());
+        }
+
+        // Check for corequisites in description
+        if desc.get_description().contains("Corequisite") {
+            let r = process_req(desc.get_description(), "Corequisite".to_string());
+            desc.set_description(r.0);
+            desc.set_corequisites(RE_SPACES.replace_all(&r.1, " ").to_string());
+        } else if desc.get_description().contains("Coreq") {
+            let r = process_req(desc.get_description(), "Coreq".to_string());
+            desc.set_description(r.0);
+            desc.set_corequisites(RE_SPACES.replace_all(&r.1, " ").to_string());
+        }
+
+        desc.set_description(RE_SPACES.replace_all(&desc.get_description(), " ").to_string());
+    }
+
+    courses.to_vec()
+}
+
 pub fn find_fees(descs: &mut Vec<CourseDescription>) -> Vec<CourseDescription> {
     for mut desc in descs.iter_mut() {
         if desc.description.contains("$") {

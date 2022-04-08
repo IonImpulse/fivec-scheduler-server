@@ -1045,6 +1045,8 @@ pub async fn get_pom_courses(
         }
     }
 
+    let courses = find_reqs_courses(&mut courses);
+
     Ok(courses)
 }
 
