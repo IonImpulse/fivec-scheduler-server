@@ -251,12 +251,23 @@ impl Course {
         &self.seats_remaining
     }
 
+    pub fn set_seats(&mut self, seats_open: i64, seats_max: i64) {
+        self.seats_remaining = seats_open;
+        self.max_seats = seats_max;
+
+        self.seats_taken = seats_max - seats_open;
+    }
+
     pub fn get_credits(&self) -> &u64 {
         &self.credits
     }
 
     pub fn get_timings(&self) -> Vec<CourseTiming> {
         self.timing.clone()
+    }
+
+    pub fn set_timings(&mut self, timings: Vec<CourseTiming>) {
+        self.timing = timings;
     }
 
     pub fn get_notes(&self) -> &String {
@@ -1058,9 +1069,48 @@ pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
     let terms = get_terms().await.unwrap();
 
     // Then, get the courses for each area
-    let courses = get_pom_courses(areas, terms[0].clone()).await.unwrap();
+    let mut courses = get_pom_courses(areas, terms[0].clone()).await.unwrap();
+
+    // Then, get courses from CMC url for locations and seats
+    let cmc_courses = get_all_courses().await;
+
+    if let Ok(cmc_courses) = cmc_courses {
+        courses = merge_seats(&mut courses, &cmc_courses.1);
+        courses = merge_timings(&mut courses, &cmc_courses.1);
+    }
 
     Ok((terms[0].clone().Description, courses))
+}
+
+pub fn merge_seats(
+    courses: &mut Vec<Course>,
+    other_courses: &Vec<Course>,
+) -> Vec<Course> {
+
+    for course in courses.iter_mut() {
+        let cmc_course = other_courses.iter().find(|x| x.get_identifier() == course.get_identifier());
+
+        if let Some(cmc_course) = cmc_course {
+            course.set_seats(cmc_course.get_seats_remaining().clone(), cmc_course.get_max_seats().clone());
+        }
+    }
+
+    courses.to_vec()
+}
+
+pub fn merge_timings(
+    courses: &mut Vec<Course>,
+    other_courses: &Vec<Course>,
+) -> Vec<Course> {
+    for course in courses.iter_mut() {
+        let cmc_course = other_courses.iter().find(|x| x.get_identifier() == course.get_identifier());
+
+        if let Some(cmc_course) = cmc_course {
+            course.set_timings(cmc_course.get_timings().clone());
+        }
+    }
+
+    courses.to_vec()
 }
 
 pub fn merge_perms_into_courses(courses: Vec<Course>, perm_hashmap: HashMap<String, u64>) -> Vec<Course> {
