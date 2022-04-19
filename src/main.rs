@@ -157,32 +157,6 @@ async fn update_loop() -> std::io::Result<()> {
                     time_until_description_update -= 1;
                 }
 
-                if time_until_menu_update == 0 {
-                    info!("Retreiving menu info...");
-                
-                    time_until_menu_update = MENU_INTERVAL_MULTIPLIER;
-                    
-                    let menu_update = get_seven_day_menus().await;
-                    
-                    if let Ok(menu_update) = menu_update {
-                        number_of_repeated_errors = 0;
-
-                        save_menu_datebase(menu_update.clone()).unwrap();
-
-                        let mut lock = MEMORY_DATABASE.lock().await;
-                        lock.menu_cache = menu_update;
-                        drop(lock);
-
-                        info!("Successfully updated menus!");
-                    } else {
-                        number_of_repeated_errors += 1;
-                        error!("Error getting menus: {:?}", menu_update.unwrap_err());
-                    }
-                
-                } else {
-                    time_until_menu_update -= 1;
-                }
-
                 info!("Saving courses to memory...");
                 
                 let lock = MEMORY_DATABASE.lock().await;
