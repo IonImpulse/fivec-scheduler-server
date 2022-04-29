@@ -31,6 +31,7 @@ use menu::*;
 
 pub struct MemDatabase {
     pub course_cache: Vec<Course>,
+    pub areas_cache: Vec<CourseArea>,
     pub last_change: u64,
     pub code_cache: BiHashMap<String, SharedCourseList>,
     pub locations_cache: HashMap<String, (String, String)>,
@@ -44,6 +45,7 @@ impl MemDatabase {
     fn new() -> Self {
         Self {
             course_cache: Vec::new(),
+            areas_cache: Vec::new(),
             last_change: get_unix_timestamp(),
             code_cache: BiHashMap::new(),
             locations_cache: HashMap::new(),
@@ -104,6 +106,7 @@ async fn update_loop() -> std::io::Result<()> {
         
         let number_of_courses: usize;
         let mut term_update = "".to_string();
+        let mut area_update = Vec::new();
 
         if course_update.is_err() {
             number_of_repeated_errors += 1;
@@ -114,6 +117,7 @@ async fn update_loop() -> std::io::Result<()> {
 
             let mut final_course_update = course_tuple.1;
             term_update = course_tuple.0;
+            area_update = course_tuple.2;
 
             if final_course_update.is_empty() {
                 number_of_repeated_errors += 1;
@@ -172,7 +176,8 @@ async fn update_loop() -> std::io::Result<()> {
                 lock.course_cache = final_course_update;
                 lock.last_change = get_unix_timestamp();
                 lock.term = term_update.clone();
-    
+                lock.areas_cache = area_update.clone();
+
                 drop(lock);
                 
                 info!("Saved courses to memory!");
@@ -183,6 +188,7 @@ async fn update_loop() -> std::io::Result<()> {
 
                 let _ = save_course_database(lock.course_cache.clone());
                 let _ = save_code_database(lock.code_cache.clone());
+                let _ = save_areas_database(lock.areas_cache.clone());
 
                 drop(lock);
 
@@ -221,6 +227,7 @@ async fn async_main() -> std::io::Result<()> {
     lock.locations_cache = load_locations_database().unwrap();
     lock.descriptions_cache = load_descriptions_database().unwrap();
     lock.menu_cache = load_menu_database().unwrap();
+    lock.areas_cache = load_areas_database().unwrap();
     drop(lock);
 
     info!("Database(s) loaded!");
@@ -258,6 +265,7 @@ async fn async_main() -> std::io::Result<()> {
             .service(get_full_year_catalog)
             .service(get_catalog_if_stale)
             .service(get_menus)
+            .service(get_course_areas)
     })
     .bind_openssl(ADDRESS, builder)
     .unwrap()

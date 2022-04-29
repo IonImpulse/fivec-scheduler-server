@@ -11,6 +11,7 @@ use rand::SeedableRng;
 
 const COURSE_DATABASE_NAME: &str = "./course_cache.json";
 const CODE_DATA_NAME: &str = "./code_data.json";
+const AREAS_DATA_NAME: &str = "./areas_data.json";
 const LOCATION_NAME: &str = "./locations.json";
 const DESCRIPTION_NAME: &str = "./descriptions.json";
 const MENU_DATABASE_NAME: &str = "./menu_cache.json";
@@ -43,6 +44,34 @@ pub fn save_course_database(courses: Vec<Course>) -> Result<(), Error> {
         .open(COURSE_DATABASE_NAME)?;
 
     let serialized_output = serde_json::to_string(&courses).unwrap();
+
+    writer.write(serialized_output.as_bytes())?;
+
+    Ok(())
+}
+
+pub fn load_areas_database() -> Result<Vec<CourseArea>, Error> {
+    let file = OpenOptions::new().read(true).open(AREAS_DATA_NAME);
+
+    if file.is_err() {
+        return Ok(Vec::new());
+    } else {
+        let mut file = file.unwrap();
+
+        let mut data = String::new();
+        file.read_to_string(&mut data)?;
+        let areas: Vec<CourseArea> = from_slice_lenient(&data.as_bytes()).unwrap();
+        Ok(areas)
+    }
+}
+
+pub fn save_areas_database(areas: Vec<CourseArea>) -> Result<(), Error> {
+    let mut writer = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(AREAS_DATA_NAME)?;
+
+    let serialized_output = serde_json::to_string(&areas).unwrap();
 
     writer.write(serialized_output.as_bytes())?;
 

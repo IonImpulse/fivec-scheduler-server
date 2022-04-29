@@ -185,6 +185,7 @@ impl CourseTiming {
     }
 }
 
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Course {
     identifier: String,
@@ -208,6 +209,7 @@ pub struct Course {
     offered: String,
     perm_count: u64,
     fee: u64,
+    associations: Vec<String>
 }
 
 impl Course {
@@ -538,7 +540,12 @@ impl Course {
             status,
             offered: "".to_string(),
             credits_hmc,
+            associations: Vec::new(),
         }
+    }
+
+    pub fn add_association(&mut self, association: String) {
+        self.associations.push(association);
     }
 }
 
@@ -861,6 +868,7 @@ pub fn html_group_to_course(group: Vec<String>) -> Course {
         offered: "".to_string(),
         perm_count: 0,
         fee: 0,
+        associations: Vec::new(),
     }
 }
 
@@ -1008,7 +1016,7 @@ pub async fn get_perm_numbers(term_key: &str) -> std::result::Result<HashMap<Str
 pub async fn get_pom_courses(
     areas: Vec<CourseArea>,
     term: Term,
-) -> std::result::Result<Vec<Course>, Box<dyn std::error::Error>> {
+) -> std::result::Result<(Vec<Course>, Vec<CourseArea>), Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, POM_HEADERS.parse().unwrap());
 
@@ -1017,7 +1025,7 @@ pub async fn get_pom_courses(
 
     let mut courses: Vec<Course> = Vec::new();
 
-    for area in areas {
+    for area in areas.clone() {
         println!("Getting courses for area {}", area.Code);
 
         if area.Code.contains("/") {
@@ -1045,23 +1053,33 @@ pub async fn get_pom_courses(
         let courses_pom = courses_pom.as_array().unwrap();
         
         for course_pom in courses_pom {
-            let course = Course::new_from_pomona_api(course_pom.clone());
-            
+            let mut course = Course::new_from_pomona_api(course_pom.clone());
+
+            let found_course = courses.iter().position(|x| x.get_identifier() == course.get_identifier());
+
             // Don't push duplicates
-            if courses.iter().find(|x| x.get_identifier() == course.get_identifier()).is_none() {
+            if found_course.is_none() {
+                course.add_association(area.Code.to_string());
+
                 courses.push(course);
             } else {
                 println!("Duplicate course found: {}", course.get_identifier());
+
+                let mut course_to_update = courses[found_course.unwrap()].clone();
+
+                course_to_update.add_association(area.Code.to_string());
+
+                courses[found_course.unwrap()] = course_to_update;
             }
         }
     }
 
     let courses = find_reqs_courses(&mut courses);
 
-    Ok(courses)
+    Ok((courses, areas))
 }
 
-pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
+pub async fn full_pomona_update() -> Result<(String, Vec<Course>, Vec<CourseArea>)> {
     // First, get the course areas from the API
     let areas = get_areas().await.unwrap();
 
@@ -1069,7 +1087,7 @@ pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
     let terms = get_terms().await.unwrap();
 
     // Then, get the courses for each area
-    let mut courses = get_pom_courses(areas, terms[0].clone()).await.unwrap();
+    let (mut courses, areas) = get_pom_courses(areas, terms[0].clone()).await.unwrap();
 
     // Then, get courses from CMC url for locations and seats
     let cmc_courses = get_all_courses().await;
@@ -1079,7 +1097,7 @@ pub async fn full_pomona_update() -> Result<(String, Vec<Course>)> {
         courses = merge_timings(&mut courses, &cmc_courses.1);
     }
 
-    Ok((terms[0].clone().Description, courses))
+    Ok((terms[0].clone().Description, courses, areas))
 }
 
 pub fn merge_seats(
@@ -1129,6 +1147,7 @@ pub async fn test_full_update() {
     println!("{:?}", course_tuple.1);
     let all_courses = course_tuple.1;
     let term = course_tuple.0;
+    let areas = course_tuple.2;
 
     let terms = get_terms().await.unwrap();
     let perm_map = get_perm_numbers(&terms[0].Key).await.unwrap();
@@ -1137,7 +1156,7 @@ pub async fn test_full_update() {
     let all_courses = merge_perms_into_courses(all_courses, perm_map);
 
     save_course_database(all_courses.clone()).unwrap();
-
+    save_areas_database(areas.clone()).unwrap();
     /*
     let current_locations = load_locations_database().unwrap();
 

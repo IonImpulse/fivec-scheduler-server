@@ -183,3 +183,14 @@ pub async fn get_menus(_path: web::Path<()>) -> HttpResponse {
 
     HttpResponse::Ok().json(menus)
 }
+
+#[get("/getCourseAreas")]
+pub async fn get_course_areas(_path: web::Path<()>) -> HttpResponse {
+    let lock = MEMORY_DATABASE.lock().await;
+
+    let course_areas = lock.areas_cache.clone();
+
+    drop(lock);
+
+    HttpResponse::Ok().json(course_areas)
+}
